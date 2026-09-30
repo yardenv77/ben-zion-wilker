@@ -1,0 +1,264 @@
+using System;
+using System.Data;
+using System.Windows.Forms;
+
+namespace BenZionVilker
+{
+    /// <summary>
+    /// מסך ניהול ערבויות וביטוחים (UC-06) — רשימה + טופס יצירה/עדכון/מחיקה במסך אחד.
+    /// לפי CLAUDE.md, UC-06 ממומש כ-UC יחיד המכסה את שתי תת-המחלקות BankGuarantee ו-InsurancePolicy
+    /// (Inheritance -- Table-per-Subclass), ולא כשני מסכים נפרדים. שדה "סוג" קובע איזו תת-מחלקה
+    /// נוצרת; שדות ייעודיים לסוג האחר נשארים ריקים ואינם בשימוש.
+    /// </summary>
+    public partial class FinancialSecurityPanel : UserControl
+    {
+        private const string TypeGuarantee = "ערבות בנקאית";
+        private const string TypePolicy = "פוליסת ביטוח";
+
+        private FinancialSecurity selectedSecurity;
+
+        public FinancialSecurityPanel()
+        {
+            InitializeComponent();
+            Theme.ApplyStandardPanelTheme(this);
+            Theme.WrapInCard(dataGridView_securities);
+
+            comboBox_type.Items.Add(TypeGuarantee);
+            comboBox_type.Items.Add(TypePolicy);
+            comboBox_type.SelectedIndex = 0;
+
+            foreach (SecurityStatus s in Enum.GetValues(typeof(SecurityStatus)))
+                comboBox_status.Items.Add(s.ToString());
+            comboBox_status.SelectedIndex = 0;
+
+            foreach (Project proj in Program.Projects)
+                comboBox_project.Items.Add(proj.getProjectId() + " - " + proj.getName());
+
+            loadSecurities();
+        }
+
+        private void loadSecurities()
+        {
+            DataTable dt = new DataTable();
+            dt.Columns.Add("financialSecurityId", typeof(int));
+            dt.Columns.Add("type", typeof(string));
+            dt.Columns.Add("amount", typeof(decimal));
+            dt.Columns.Add("issueDate", typeof(DateTime));
+            dt.Columns.Add("expiryDate", typeof(DateTime));
+            dt.Columns.Add("status", typeof(string));
+            dt.Columns.Add("details", typeof(string));
+
+            foreach (FinancialSecurity fs in Program.FinancialSecurities)
+            {
+                string type, details;
+                if (fs is BankGuarantee bg)
+                {
+                    type = TypeGuarantee;
+                    details = bg.getBankName() + " / " + bg.getGuaranteeNumber();
+                }
+                else if (fs is InsurancePolicy ip)
+                {
+                    type = TypePolicy;
+                    details = ip.getInsurerName() + " / " + ip.getPolicyNumber() + " / " + ip.getCoverageType();
+                }
+                else continue;
+
+                dt.Rows.Add(fs.getFinancialSecurityId(), type, fs.getAmount(), fs.getIssueDate(), fs.getExpiryDate(), fs.getStatus().ToString(), details);
+            }
+
+            dataGridView_securities.DataSource = dt;
+            dataGridView_securities.Columns["amount"].DefaultCellStyle.Format = "N2";
+            dataGridView_securities.Columns["issueDate"].DefaultCellStyle.Format = "yyyy-MM-dd";
+            dataGridView_securities.Columns["expiryDate"].DefaultCellStyle.Format = "yyyy-MM-dd";
+
+            dataGridView_securities.Columns["financialSecurityId"].HeaderText = "מס'";
+            dataGridView_securities.Columns["type"].HeaderText = "סוג";
+            dataGridView_securities.Columns["amount"].HeaderText = "סכום";
+            dataGridView_securities.Columns["issueDate"].HeaderText = "תאריך הנפקה";
+            dataGridView_securities.Columns["expiryDate"].HeaderText = "תאריך תפוגה";
+            dataGridView_securities.Columns["status"].HeaderText = "סטטוס";
+            dataGridView_securities.Columns["details"].HeaderText = "פרטים";
+        }
+
+        private void dataGridView_securities_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            int id = int.Parse(dataGridView_securities.Rows[e.RowIndex].Cells["financialSecurityId"].Value.ToString());
+            selectedSecurity = FinancialSecurity.seekFinancialSecurity(id);
+            if (selectedSecurity == null) return;
+
+            textBox_financialSecurityId.Text = selectedSecurity.getFinancialSecurityId().ToString();
+            comboBox_project.Text = selectedSecurity.getProject().getProjectId() + " - " + selectedSecurity.getProject().getName();
+            textBox_amount.Text = selectedSecurity.getAmount().ToString();
+            textBox_issueDate.Text = selectedSecurity.getIssueDate().ToString("yyyy-MM-dd");
+            textBox_expiryDate.Text = selectedSecurity.getExpiryDate().ToString("yyyy-MM-dd");
+            comboBox_status.Text = selectedSecurity.getStatus().ToString();
+
+            textBox_bankName.Text = "";
+            textBox_guaranteeNumber.Text = "";
+            textBox_insurerName.Text = "";
+            textBox_policyNumber.Text = "";
+            textBox_coverageType.Text = "";
+
+            if (selectedSecurity is BankGuarantee bg)
+            {
+                comboBox_type.Text = TypeGuarantee;
+                textBox_bankName.Text = bg.getBankName();
+                textBox_guaranteeNumber.Text = bg.getGuaranteeNumber();
+            }
+            else if (selectedSecurity is InsurancePolicy ip)
+            {
+                comboBox_type.Text = TypePolicy;
+                textBox_insurerName.Text = ip.getInsurerName();
+                textBox_policyNumber.Text = ip.getPolicyNumber();
+                textBox_coverageType.Text = ip.getCoverageType();
+            }
+        }
+
+        private Project resolveSelectedProject()
+        {
+            int id = int.Parse(comboBox_project.Text.Split(new[] { " - " }, StringSplitOptions.None)[0]);
+            return Project.seekProject(id);
+        }
+
+        private bool validateFields()
+        {
+            if (comboBox_project.SelectedIndex < 0 && string.IsNullOrWhiteSpace(comboBox_project.Text))
+            {
+                MessageBox.Show("יש לבחור פרויקט", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            if (!decimal.TryParse(textBox_amount.Text, out _))
+            {
+                MessageBox.Show("יש להזין סכום תקין", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            if (!DateTime.TryParse(textBox_issueDate.Text, out _))
+            {
+                MessageBox.Show("יש להזין תאריך הנפקה תקין (yyyy-MM-dd)", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            if (!DateTime.TryParse(textBox_expiryDate.Text, out _))
+            {
+                MessageBox.Show("יש להזין תאריך תפוגה תקין (yyyy-MM-dd)", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            if (comboBox_type.Text == TypeGuarantee)
+            {
+                if (string.IsNullOrWhiteSpace(textBox_bankName.Text) || string.IsNullOrWhiteSpace(textBox_guaranteeNumber.Text))
+                {
+                    MessageBox.Show("יש להזין שם בנק ומספר ערבות", "שגיאה", MessageBoxButtons.OK);
+                    return false;
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(textBox_insurerName.Text) || string.IsNullOrWhiteSpace(textBox_policyNumber.Text) || string.IsNullOrWhiteSpace(textBox_coverageType.Text))
+                {
+                    MessageBox.Show("יש להזין מבטח, מספר פוליסה וסוג כיסוי", "שגיאה", MessageBoxButtons.OK);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private void clearForm()
+        {
+            selectedSecurity = null;
+            textBox_financialSecurityId.Text = "";
+            comboBox_type.SelectedIndex = 0;
+            comboBox_project.SelectedIndex = -1;
+            comboBox_project.Text = "";
+            textBox_amount.Text = "";
+            textBox_issueDate.Text = "";
+            textBox_expiryDate.Text = "";
+            comboBox_status.SelectedIndex = 0;
+            textBox_bankName.Text = "";
+            textBox_guaranteeNumber.Text = "";
+            textBox_insurerName.Text = "";
+            textBox_policyNumber.Text = "";
+            textBox_coverageType.Text = "";
+        }
+
+        private void button_save_Click(object sender, EventArgs e)
+        {
+            if (!validateFields()) return;
+
+            int id = FinancialSecurity.getNextFinancialSecurityId();
+            decimal amount = decimal.Parse(textBox_amount.Text);
+            DateTime issueDate = DateTime.Parse(textBox_issueDate.Text);
+            DateTime expiryDate = DateTime.Parse(textBox_expiryDate.Text);
+            SecurityStatus status = (SecurityStatus)Enum.Parse(typeof(SecurityStatus), comboBox_status.Text);
+
+            Project project = resolveSelectedProject();
+            if (comboBox_type.Text == TypeGuarantee)
+                new BankGuarantee(id, project, amount, issueDate, expiryDate, status, textBox_bankName.Text, textBox_guaranteeNumber.Text, true);
+            else
+                new InsurancePolicy(id, project, amount, issueDate, expiryDate, status, textBox_insurerName.Text, textBox_policyNumber.Text, textBox_coverageType.Text, true);
+
+            MessageBox.Show("הערבות/הביטוח נשמרו בהצלחה", "הודעה", MessageBoxButtons.OK);
+            clearForm();
+            loadSecurities();
+        }
+
+        private void button_update_Click(object sender, EventArgs e)
+        {
+            if (selectedSecurity == null)
+            {
+                MessageBox.Show("יש לבחור רשומה מהרשימה", "שגיאה", MessageBoxButtons.OK);
+                return;
+            }
+            if (!validateFields()) return;
+
+            selectedSecurity.setProject(resolveSelectedProject());
+            selectedSecurity.setAmount(decimal.Parse(textBox_amount.Text));
+            selectedSecurity.setIssueDate(DateTime.Parse(textBox_issueDate.Text));
+            selectedSecurity.setExpiryDate(DateTime.Parse(textBox_expiryDate.Text));
+            selectedSecurity.setStatus((SecurityStatus)Enum.Parse(typeof(SecurityStatus), comboBox_status.Text));
+
+            if (selectedSecurity is BankGuarantee bg)
+            {
+                bg.setBankName(textBox_bankName.Text);
+                bg.setGuaranteeNumber(textBox_guaranteeNumber.Text);
+                bg.updateBankGuarantee();
+            }
+            else if (selectedSecurity is InsurancePolicy ip)
+            {
+                ip.setInsurerName(textBox_insurerName.Text);
+                ip.setPolicyNumber(textBox_policyNumber.Text);
+                ip.setCoverageType(textBox_coverageType.Text);
+                ip.updateInsurancePolicy();
+            }
+
+            MessageBox.Show("הרשומה עודכנה בהצלחה", "הודעה", MessageBoxButtons.OK);
+            clearForm();
+            loadSecurities();
+        }
+
+        private void button_delete_Click(object sender, EventArgs e)
+        {
+            if (selectedSecurity == null)
+            {
+                MessageBox.Show("יש לבחור רשומה מהרשימה", "שגיאה", MessageBoxButtons.OK);
+                return;
+            }
+
+            DialogResult result = MessageBox.Show("האם למחוק את הרשומה?", "אישור מחיקה", MessageBoxButtons.YesNo);
+            if (result != DialogResult.Yes) return;
+
+            if (selectedSecurity is BankGuarantee bg)
+                bg.deleteBankGuarantee();
+            else if (selectedSecurity is InsurancePolicy ip)
+                ip.deleteInsurancePolicy();
+
+            clearForm();
+            loadSecurities();
+        }
+
+        private void button_back_Click(object sender, EventArgs e)
+        {
+            mainForm.showPanel(new MainMenuPanel());
+        }
+    }
+}

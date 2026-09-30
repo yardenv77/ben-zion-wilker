@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wilker 1987 Ltd - Class Diagram</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f1f5f9; font-family: 'IBM Plex Mono', monospace; }
+  .title-bar { padding: 14px 20px 4px; }
+  .title-bar h1 { margin: 0; font-size: 17px; color: #0f172a; }
+  .title-bar p { margin: 4px 0 0; font-size: 11.5px; color: #64748b; }
+  .split-rationale { font-size: 11px; color: #64748b; padding: 0 20px 8px; }
+  svg { display: block; }
+  .vp-export-btn {
+    position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+    background: #1e40af; color: #fff; border: none; border-radius: 6px;
+    padding: 8px 16px; font-size: 13px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .vp-export-btn:hover { background: #1e3a8a; }
+  @media print { .vp-export-btn { display: none; } }
+</style>
+</head>
+<body>
+  <div class="title-bar">
+    <h1>Ben Tzion Wilker 1987 Ltd &mdash; Domain Class Diagram</h1>
+    <p>Government-contractor construction &amp; infrastructure ERP &mdash; System Analysis &amp; Design course project</p>
+  </div>
+  <div class="split-rationale">No split &mdash; 23 domain classes, 13 enumerations and 1 external system on a single canvas, in four clusters: Sales/Tendering (top-left), Procurement &amp; Partners (top-right), Field Execution (left), Finance &amp; Risk (bottom-right). Green outline = implemented in the programming part.</div>
+
+  <svg id="diagram-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div id="layout-check" hidden></div>
+
+  <button class="vp-export-btn" onclick="exportXMI()">Download .xmi (Visual Paradigm)</button>
+
+  <script>
+// inScope: true = class is implemented in the programming part (the 4 selected use cases)
+const CLASSES = [
+  // ── Sales / Tendering ──
+  { id: 'Client', name: 'Client', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: false,
+    attrs: ['- name : String', '- contactPerson : String', '- phone : String', '- email : String', '- sector : String'],
+    ops: ['+ getActiveProjects() : List', '+ getTotalRevenue() : Money'],
+    x: 40, y: 80 },
+  { id: 'Tender', name: 'Tender', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: false,
+    attrs: ['- tenderNumber : String', '- title : String', '- estimatedValue : Money', '- submissionDeadline : Date', '- publishedDate : Date', '- status : TenderStatus'],
+    ops: ['+ daysUntilDeadline() : Integer', '+ isExpiringSoon() : Boolean'],
+    x: 318, y: 80 },
+  { id: 'TenderStatus', name: 'TenderStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Searching', 'InPreparation', 'Submitted', 'Won', 'Lost'], ops: [],
+    x: 596, y: 80 },
+  { id: 'Project', name: 'Project', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- name : String', '- address : String', '- plannedStartDate : Date', '- plannedEndDate : Date', '- actualStartDate : Date', '- actualEndDate : Date', '- status : ProjectStatus'],
+    ops: ['+ calculateProfitability() : Money', '+ isOverBudget() : Boolean', '+ getCurrentProgress() : Real'],
+    x: 820, y: 80 },
+  { id: 'ProjectStatus', name: 'ProjectStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['InProgress', 'Completed', 'OnHold', 'Cancelled'], ops: [],
+    x: 1097, y: 80 },
+
+  // ── Procurement & Partners ──
+  { id: 'BusinessPartner', name: 'BusinessPartner', stereotype: '«abstract»', isEnum: false, isExternal: false, isAbstract: true, inScope: true,
+    attrs: ['- name : String', '- companyRegistrationNo : String', '- contactPerson : String', '- phone : String', '- email : String', '- rating : Real', '- status : PartnerStatus'],
+    ops: ['+ isActive() : Boolean', '+ getEngagementHistory() : List'],
+    x: 1320, y: 80 },
+  { id: 'PartnerStatus', name: 'PartnerStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Active', 'Inactive'], ops: [],
+    x: 1584, y: 80 },
+  { id: 'TradeCategory', name: 'TradeCategory', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: false,
+    attrs: ['- categoryName : String'],
+    ops: ['+ getAverageQuotePrice() : Money', '+ getSupplierCount() : Integer'],
+    x: 1744, y: 80 },
+  { id: 'MODPortal', name: 'MODPortal', stereotype: '«external system»', isEnum: false, isExternal: true, isAbstract: false,
+    attrs: [], ops: [],
+    x: 2200, y: 80 },
+  { id: 'Supplier', name: 'Supplier', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: [],
+    ops: ['+ getActivePriceQuotes() : List', '+ getPurchaseOrderCount() : Integer'],
+    x: 1320, y: 340 },
+  { id: 'Subcontractor', name: 'Subcontractor', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- tradeSpecialty : String', '- dailyRate : Money'],
+    ops: ['+ getRecentJobs() : List', '+ getAvgVariance() : Real'],
+    x: 1600, y: 340 },
+  { id: 'SupplierPriceQuote', name: 'SupplierPriceQuote', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: false,
+    attrs: ['- amount : Money', '- dateIssued : Date', '- validUntil : Date', '- isSelected : Boolean'],
+    ops: ['+ isExpired() : Boolean', '+ isBestOffer() : Boolean'],
+    x: 1842, y: 320 },
+  { id: 'PurchaseOrder', name: 'PurchaseOrder', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- poNumber : String', '- orderDate : Date', '- status : POStatus', '- rejectionReason : String', '- closureReason : ClosureReason'],
+    ops: [
+      // queries (guards BR-2 / BR-5)
+      '+ calculateTotal() : Money', '+ calculateVat() : Money', '+ exceedsBudget() : Boolean', '+ isFullyReceived() : Boolean',
+      // events of the state diagram -> public methods
+      '+ addLine(line : PurchaseOrderLine)', '+ editLine(line : PurchaseOrderLine)', '+ submit()', '+ withdraw()',
+      '+ approveBudgetOverride()', '+ approve()', '+ reject(reason : String)', '+ revise()', '+ cancel()', '+ autoCancel()',
+      '+ receiveDelivery(line : PurchaseOrderLine, qty : Real)', '+ cancelRemaining()', '+ archive()', '+ purge()',
+      // entry wrappers and transition actions -> private methods
+      '- setStatus(status : POStatus)', '- setClosureReason(reason : ClosureReason)',
+      '- flagForOverride()', '- requestPMApproval()', '- returnToAccountant()', '- markAsSent()', '- closeAsReceived()', '- closeAsCancelled()',
+      '- notifyCEO()', '- notifyProjectManager()', '- notifyAccountant()', '- sendPOEmailToSupplier()',
+      '- recalculateTotals()', '- recordRejection(reason : String)', '- recordDelivery()', '- delete()'
+    ],
+    x: 1320, y: 560 },
+  { id: 'PurchaseOrderLine', name: 'PurchaseOrderLine', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- description : String', '- unitOfMeasure : String', '- quantity : Real', '- receivedQuantity : Real', '- unitPrice : Money'],
+    ops: ['+ getLineTotal() : Money', '+ isPriced() : Boolean', '+ getRemainingQuantity() : Real'],
+    x: 1754, y: 560 },
+  { id: 'POStatus', name: 'POStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Draft', 'UnderApproval', 'PendingPMApproval', 'PendingBudgetOverride', 'Rejected', 'InFulfillment', 'Sent', 'PartiallyReceived', 'Received', 'Cancelled', 'Archived'], ops: [],
+    x: 2032, y: 560 },
+  { id: 'ClosureReason', name: 'ClosureReason', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Received', 'Cancelled'], ops: [],
+    x: 2032, y: 800 },
+
+  // ── Field Execution ──
+  { id: 'Employee', name: 'Employee', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- firstName : String', '- lastName : String', '- nationalId : String', '- role : EmployeeRole', '- dailyRate : Money', '- certificationNo : String', '- status : EmployeeStatus'],
+    ops: ['+ isAvailable(date : Date) : Boolean', '+ getFullName() : String'],
+    x: 440, y: 560 },
+  { id: 'EmployeeRole', name: 'EmployeeRole', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['SiteSupervisor', 'EquipmentManager', 'SafetyManager', 'ProjectManager', 'Accountant', 'FinanceOfficer', 'CEO', 'TenderCoordinator'], ops: [],
+    x: 250, y: 560 },
+  { id: 'EmployeeStatus', name: 'EmployeeStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Active', 'OnVacation', 'Suspended', 'Terminated'], ops: [],
+    x: 250, y: 760 },
+  { id: 'DailyWorkLog', name: 'DailyWorkLog', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- logDate : Date', '- plannedQuantity : Real', '- completedQuantity : Real', '- status : WorkLogStatus'],
+    ops: ['+ isBelowThreshold() : Boolean', '+ calculateVariance() : Real'],
+    x: 330, y: 950 },
+  { id: 'WorkLogStatus', name: 'WorkLogStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Submitted', 'UnderReview'], ops: [],
+    x: 150, y: 950 },
+  { id: 'Attendance', name: 'Attendance', stereotype: '«association class»', isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- startTime : Time', '- endTime : Time', '- taskDescription : String'],
+    ops: ['+ hoursWorked() : Real', '+ getDailyPay() : Money', '+ isFullDay() : Boolean'],
+    x: 580, y: 790 },
+  { id: 'Equipment', name: 'Equipment', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- licenseNumber : String', '- equipmentType : String', '- description : String', '- dailyCost : Money', '- status : EquipmentStatus'],
+    ops: ['+ isAvailable(date : Date) : Boolean', '+ getUsageHistory() : List'],
+    x: 330, y: 1180 },
+  { id: 'EquipmentStatus', name: 'EquipmentStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Available', 'InUse', 'UnderRepair'], ops: [],
+    x: 150, y: 1180 },
+  { id: 'EquipmentUsage', name: 'EquipmentUsage', stereotype: '«association class»', isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- hoursOperated : Real'],
+    ops: ['+ getUsageCost() : Money', '+ isExcessiveUsage() : Boolean'],
+    x: 600, y: 1082 },
+  { id: 'EquipmentAssignment', name: 'EquipmentAssignment', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: false,
+    attrs: ['- startDate : Date', '- endDate : Date'],
+    ops: ['+ getDurationDays() : Integer', '+ isActive() : Boolean'],
+    x: 640, y: 1230 },
+
+  // ── Finance & Risk ──
+  { id: 'BudgetLine', name: 'BudgetLine', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- category : String', '- plannedAmount : Money', '- actualAmount : Money'],
+    ops: ['+ getVariance() : Money', '+ isOverThreshold(percent : Real) : Boolean'],
+    x: 1320, y: 1220 },
+  { id: 'FinancialSecurity', name: 'FinancialSecurity', stereotype: '«abstract»', isEnum: false, isExternal: false, isAbstract: true, inScope: true,
+    attrs: ['- amount : Money', '- issueDate : Date', '- expiryDate : Date', '- status : SecurityStatus'],
+    ops: ['+ isExpiringSoon() : Boolean', '+ getRemainingDays() : Integer'],
+    x: 1656, y: 1220 },
+  { id: 'SecurityStatus', name: 'SecurityStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Active', 'Expired', 'Released'], ops: [],
+    x: 1910, y: 1220 },
+  { id: 'BankGuarantee', name: 'BankGuarantee', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- bankName : String', '- guaranteeNumber : String'],
+    ops: ['+ isCallable() : Boolean', '+ renew() : Boolean'],
+    x: 1656, y: 1420 },
+  { id: 'InsurancePolicy', name: 'InsurancePolicy', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- insurerName : String', '- policyNumber : String', '- coverageType : String'],
+    ops: ['+ fileClaim(desc : String) : Boolean', '+ isCoverageActive() : Boolean'],
+    x: 1881, y: 1420 },
+  { id: 'PaymentRequest', name: 'PaymentRequest', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- amount : Money', '- submissionDate : Date', '- approvalDate : Date', '- status : PaymentRequestStatus'],
+    ops: ['+ daysWaiting() : Integer', '+ isApproved() : Boolean', '+ getMissingDocuments() : List'],
+    x: 1320, y: 1580 },
+  { id: 'PaymentRequestStatus', name: 'PaymentRequestStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Submitted', 'UnderReview', 'Approved', 'Rejected', 'Paid'], ops: [],
+    x: 1578, y: 1580 },
+  { id: 'SubmittedDocument', name: 'SubmittedDocument', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- type : DocumentType', '- receivedOn : Date'],
+    ops: [],
+    x: 1790, y: 1580 },
+  { id: 'DocumentType', name: 'DocumentType', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Invoice', 'QuantityStatement', 'SupervisorApproval', 'SiteDiaryExtract', 'InsuranceCertificate'], ops: [],
+    x: 1990, y: 1580 },
+  { id: 'SupplierPayment', name: 'SupplierPayment', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
+    attrs: ['- invoiceNumber : String', '- amount : Money', '- dueDate : Date', '- paidDate : Date', '- status : SupplierPaymentStatus'],
+    ops: ['+ isOverdue() : Boolean', '+ getDaysOverdue() : Integer'],
+    x: 1320, y: 1800 },
+  { id: 'SupplierPaymentStatus', name: 'SupplierPaymentStatus', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
+    attrs: ['Pending', 'Paid', 'Overdue'], ops: [],
+    x: 1590, y: 1800 }
+];
+
+// fromRolePos / toRolePos: [x, y, anchor] — explicit role-name placement where the
+// automatic offset would collide with a neighbouring parallel association.
+const RELS = [
+  { id: 'r33', type: 'assoc', from: 'Client', to: 'Tender', fromMult: '1', toMult: '0..*',
+    points: [[238,157], [318,157]] },
+  { id: 'r2', type: 'assoc', from: 'Tender', to: 'Project', fromMult: '1', toMult: '0..1', label: 'becomes',
+    points: [[427,233], [427,245], [820,245]] },
+  { id: 'r14', type: 'dep', from: 'Project', to: 'MODPortal', label: '« depends on »  syncs status & reports',
+    points: [[900,80], [900,45], [2263,45], [2263,80]] },
+
+  // SupplierPriceQuote: mediating class replacing the ternary association
+  { id: 'q1', type: 'assoc', from: 'Supplier', to: 'SupplierPriceQuote', fromMult: '1', toMult: '0..*',
+    points: [[1540,409], [1540,480], [1930,480], [1930,445]] },
+  { id: 'q2', type: 'assoc', from: 'TradeCategory', to: 'SupplierPriceQuote', fromMult: '1', toMult: '0..*',
+    points: [[1900,163], [1900,320]] },
+  { id: 'q3', type: 'assoc', from: 'Tender', to: 'SupplierPriceQuote', fromMult: '1', toMult: '0..*',
+    points: [[500,80], [500,20], [2110,20], [2110,380], [2021,380]] },
+
+  { id: 'r4', type: 'gen', from: 'Supplier', to: 'BusinessPartner',
+    points: [[1430,340], [1430,257]] },
+  { id: 'r5', type: 'gen', from: 'Subcontractor', to: 'BusinessPartner',
+    points: [[1690,340], [1690,300], [1432,300], [1432,257]] },
+  { id: 'r6', type: 'assoc', from: 'Project', to: 'PurchaseOrder', fromMult: '1', toMult: '0..*',
+    points: [[1057,200], [1200,200], [1200,580], [1320,580]] },
+  { id: 'r7', type: 'assoc', from: 'Supplier', to: 'PurchaseOrder', fromMult: '1', toMult: '0..*',
+    points: [[1416,409], [1416,560]] },
+  { id: 'r8', type: 'comp', from: 'PurchaseOrder', to: 'PurchaseOrderLine', fromMult: '1', toMult: '1..*',
+    points: [[1694,620], [1754,620]] },
+
+  // Employee roles (grader: every role in the UCs must appear) — one association per role
+  { id: 'e1', type: 'assoc', from: 'Employee', to: 'Project', fromMult: '1', toMult: '0..*', fromRole: 'projectManager',
+    fromRolePos: [656, 530, 'start'],
+    points: [[650,560], [650,400], [940,400], [940,261]] },
+  { id: 'e2', type: 'assoc', from: 'Employee', to: 'PurchaseOrder', fromMult: '1', toMult: '0..*', fromRole: 'createdBy',
+    fromRolePos: [700, 595, 'start'],
+    points: [[690,600], [1320,600]] },
+  { id: 'e3', type: 'assoc', from: 'Employee', to: 'PurchaseOrder', fromMult: '1', toMult: '0..*', fromRole: 'approvedBy',
+    fromRolePos: [700, 635, 'start'],
+    points: [[690,640], [1320,640]] },
+  { id: 'e4', type: 'assoc', from: 'Employee', to: 'PurchaseOrder', fromMult: '0..1', toMult: '0..*', fromRole: 'overrideApprovedBy',
+    fromRolePos: [700, 675, 'start'],
+    points: [[690,680], [1320,680]] },
+
+  { id: 'r15', type: 'assoc', from: 'Employee', to: 'DailyWorkLog', fromMult: '1', toMult: '0..*', fromRole: 'submittedBy',
+    fromRolePos: [454, 772, 'end'],
+    points: [[460,727], [460,950]] },
+  { id: 'r16', type: 'assoc', from: 'Employee', to: 'DailyWorkLog', fromMult: '0..*', toMult: '0..*',
+    points: [[520,727], [520,950]] },
+  { id: 'r17', type: 'tether', from: 'Attendance', to: 'r16',
+    points: [[520,860], [580,860]] },
+  { id: 'r11', type: 'assoc', from: 'Project', to: 'DailyWorkLog', fromMult: '1', toMult: '0..*',
+    points: [[850,261], [850,1010], [541,1010]] },
+  { id: 'r34', type: 'assoc', from: 'Subcontractor', to: 'DailyWorkLog', fromMult: '0..1', toMult: '0..*', label: 'if subcontracted',
+    labelPos: [1328, 497],
+    points: [[1690,437], [1690,505], [810,505], [810,1040], [541,1040]] },
+  { id: 'r18', type: 'assoc', from: 'DailyWorkLog', to: 'Equipment', fromMult: '0..*', toMult: '0..*',
+    points: [[400,1075], [400,1180]] },
+  { id: 'r19', type: 'tether', from: 'EquipmentUsage', to: 'r18',
+    points: [[400,1128], [600,1128]] },
+  { id: 'r20', type: 'assoc', from: 'Project', to: 'EquipmentAssignment', fromMult: '1', toMult: '0..*',
+    points: [[880,261], [880,1280], [845,1280]] },
+  { id: 'r21', type: 'assoc', from: 'Equipment', to: 'EquipmentAssignment', fromMult: '1', toMult: '0..*',
+    points: [[580,1270], [640,1270]] },
+
+  { id: 'r3', type: 'comp', from: 'Project', to: 'BudgetLine', fromMult: '1', toMult: '1..*',
+    points: [[1000,261], [1000,1185], [1468,1185], [1468,1220]] },
+  { id: 'r12', type: 'assoc', from: 'Project', to: 'FinancialSecurity', fromMult: '1', toMult: '0..*',
+    points: [[1030,261], [1030,1165], [1755,1165], [1755,1220]] },
+  { id: 'r22', type: 'gen', from: 'BankGuarantee', to: 'FinancialSecurity',
+    points: [[1755,1420], [1755,1355]] },
+  { id: 'r23', type: 'gen', from: 'InsurancePolicy', to: 'FinancialSecurity',
+    points: [[1964,1420], [1964,1395], [1757,1395], [1757,1355]] },
+  { id: 'r13', type: 'assoc', from: 'Project', to: 'PaymentRequest', fromMult: '1', toMult: '0..*',
+    points: [[1057,250], [1100,250], [1100,1540], [1429,1540], [1429,1580]] },
+  { id: 'd1', type: 'comp', from: 'PaymentRequest', to: 'SubmittedDocument', fromMult: '1', toMult: '0..*',
+    points: [[1500,1719], [1500,1760], [1860,1760], [1860,1648]] },
+  { id: 'r24', type: 'assoc', from: 'BusinessPartner', to: 'SupplierPayment', fromMult: '1', toMult: '0..*',
+    points: [[1320,171], [1240,171], [1240,1860], [1320,1860]] }
+];
+
+const NOTES = [
+  { id: 'nRoles', x: 40, y: 280, w: 560,
+    title: 'Two classes, more than one association',
+    lines: [
+      'Employee - PurchaseOrder, one association per role in UC-03:',
+      '  createdBy           {role = Accountant}      drafted the PO',
+      '  approvedBy          {role = ProjectManager}  approved it (step 10)',
+      '  overrideApprovedBy  {role = CEO}             budget override (8a)',
+      'Employee - Project: projectManager {role = ProjectManager}',
+      'Employee - DailyWorkLog: submittedBy = the site supervisor who',
+      '  files the log; Attendance = every worker present that day'
+    ],
+    tether: [[470,413], [470,560]] },
+  { id: 'nQuote', x: 2130, y: 330, w: 230,
+    title: 'Mediating class',
+    lines: [
+      'Replaces a ternary association:',
+      'a quote price depends on the',
+      'Supplier, the Tender and the',
+      'TradeCategory together.'
+    ],
+    tether: [[2130,410], [2021,410]] },
+  { id: 'nScope', x: 40, y: 1420, w: 610,
+    title: 'Scope of the programming part',
+    lines: [
+      'Green outline = implemented, it serves one of the 4 selected UCs:',
+      '  UC-03 Create PO, UC-04 Daily Work Log, UC-05 Profitability Report,',
+      '  Manage Guarantee & Insurance (SupplierPayment = actual supplier cost',
+      '  aggregated by UC-05).',
+      'No outline = kept in the domain model as the architectural skeleton',
+      '  (tendering, price quotes, equipment assignment) and not implemented.'
+    ] },
+  { id: 'nAttend', x: 40, y: 1590, w: 610,
+    title: 'Attendance',
+    lines: [
+      '{endTime > startTime};  hoursWorked() = endTime - startTime (derived)'
+    ] }
+];
+
+// ── Constants ─────────────────────────────────────────────────────────────
+const HDR_H = 28, PAD = 6, LINE_H = 14, DIV_H = 1;
+const FM = 'font-family="IBM Plex Mono, monospace"';
+
+function escXml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function boxH(cls) {
+  const hdrH = cls.stereotype ? 38 : HDR_H;
+  return hdrH + PAD + cls.attrs.length * LINE_H +
+    (cls.ops.length > 0 ? DIV_H + cls.ops.length * LINE_H : 0) + PAD;
+}
+
+function boxW(cls) {
+  const longest = [...cls.attrs, ...cls.ops, cls.name, cls.stereotype || '']
+    .reduce((m, s) => Math.max(m, s.length), 0);
+  return Math.max(120, Math.ceil(longest * 6.5) + 16);
+}
+
+function svgBox(cls) {
+  const w = boxW(cls), h = boxH(cls), { x, y } = cls;
+  const hdrH = cls.stereotype ? 38 : HDR_H;
+  const border   = cls.isEnum ? '#94a3b8' : cls.isExternal ? '#64748b' : '#3b82f6';
+  const hdrFill  = cls.isEnum ? '#475569' : cls.isExternal ? '#64748b' : '#1e40af';
+  const bodyFill = cls.isEnum ? '#f8fafc' : cls.isExternal ? '#f1f5f9' : 'white';
+  const dash     = cls.isEnum ? 'stroke-dasharray="5 3"' : '';
+
+  let s = '';
+  if (cls.inScope)
+    s += `<rect x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${h + 8}" fill="none" stroke="#16a34a" stroke-width="2.5" rx="5"/>`;
+  s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${bodyFill}" stroke="${border}" stroke-width="2" ${dash} rx="2"/>`;
+  s += `<rect x="${x}" y="${y}" width="${w}" height="${hdrH}" fill="${hdrFill}" rx="2"/>`;
+
+  if (cls.stereotype) {
+    s += `<text x="${x + w/2}" y="${y + 13}" text-anchor="middle" fill="white" font-size="9" ${FM}>${escXml(cls.stereotype)}</text>`;
+  }
+  const nameStyle = cls.isAbstract ? 'font-style:italic' : '';
+  const nameY = cls.stereotype ? y + hdrH - 8 : y + hdrH / 2 + 4;
+  s += `<text x="${x + w/2}" y="${nameY}" text-anchor="middle" fill="white" font-size="11" font-weight="700" ${FM} style="${nameStyle}">${escXml(cls.name)}</text>`;
+
+  const divY = y + hdrH;
+  s += `<line x1="${x}" y1="${divY}" x2="${x + w}" y2="${divY}" stroke="${border}" stroke-width="1"/>`;
+
+  let curY = divY + PAD + 10;
+  for (const a of cls.attrs) {
+    s += `<text x="${x + 6}" y="${curY}" text-anchor="start" fill="#1e293b" font-size="10.5" ${FM}>${escXml(a)}</text>`;
+    curY += LINE_H;
+  }
+  if (cls.ops.length > 0) {
+    const opDivY = divY + PAD + cls.attrs.length * LINE_H;
+    s += `<line x1="${x}" y1="${opDivY}" x2="${x + w}" y2="${opDivY}" stroke="${border}" stroke-width="1"/>`;
+    curY = opDivY + PAD + 10;
+    for (const o of cls.ops) {
+      s += `<text x="${x + 6}" y="${curY}" text-anchor="start" fill="#2563eb" font-size="10.5" font-style="italic" ${FM}>${escXml(o)}</text>`;
+      curY += LINE_H;
+    }
+  }
+  return s;
+}
+
+// svgRel — engine per NOTATION.md, with a 'tether' type for the association-class
+// dashed attachment line and fromRole/toRole rendering (§ Role names).
+function svgRel(rel) {
+  const pts = rel.points.map(([px, py]) => `${px},${py}`).join(' ');
+  let mS = '', mE = '', dash = '', width = '1.8';
+  if (rel.type === 'comp')   mS = 'marker-start="url(#compFill)"';
+  if (rel.type === 'gen')    mE = 'marker-end="url(#genHollow)"';
+  if (rel.type === 'dep')    { mE = 'marker-end="url(#arrOpen)"'; dash = 'stroke-dasharray="6 3"'; }
+  if (rel.type === 'tether') { dash = 'stroke-dasharray="3 3"'; width = '1.3'; }
+  // 'assoc': no markers — plain line
+
+  const strokeColor = rel.type === 'tether' ? '#64748b' : '#334155';
+  let s = `<polyline class="cd-edge" points="${pts}" fill="none" stroke="${strokeColor}" stroke-width="${width}" ${dash} ${mS} ${mE}/>`;
+
+  const multLabel = (end, adj, txt) => {
+    const dx = adj[0] - end[0], dy = adj[1] - end[1];
+    const L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+    // vertical segment: put the label beside the line (right-aligned to its left) instead of centred on it
+    const vertical = Math.abs(ux) < 1e-9;
+    const x = vertical ? end[0] - 5 : end[0] + ux * 16, y = end[1] + uy * 16 + ux * 9 + 3 + (vertical ? 4 * uy : 0);
+    return `<text class="cd-lbl" x="${x}" y="${y}" text-anchor="${vertical ? 'end' : 'middle'}" fill="#64748b" font-size="9.5" ${FM}>${escXml(txt)}</text>`;
+  };
+  const roleLabel = (end, adj, txt, pos) => {
+    let x, y, anchor = 'middle';
+    if (pos) { [x, y, anchor] = pos; }
+    else {
+      const dx = adj[0] - end[0], dy = adj[1] - end[1];
+      const L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+      // opposite perpendicular side from multLabel, far enough to clear it
+      x = end[0] + ux * 16 + uy * 46; y = end[1] + uy * 16 - ux * 46 + 3;
+    }
+    return `<text class="cd-lbl" x="${x}" y="${y}" text-anchor="${anchor}" fill="#0f766e" font-size="9" font-style="italic" ${FM}>${escXml(txt)}</text>`;
+  };
+  if (rel.type !== 'tether') {
+    const n = rel.points.length;
+    if (rel.fromMult) s += multLabel(rel.points[0], rel.points[1], rel.fromMult);
+    if (rel.toMult)   s += multLabel(rel.points[n - 1], rel.points[n - 2], rel.toMult);
+    if (rel.fromRole) s += roleLabel(rel.points[0], rel.points[1], rel.fromRole, rel.fromRolePos);
+    if (rel.toRole)   s += roleLabel(rel.points[n - 1], rel.points[n - 2], rel.toRole, rel.toRolePos);
+  }
+  if (rel.label) {
+    let lx, ly;
+    if (rel.labelPos) { [lx, ly] = rel.labelPos; }
+    else {
+      // label-on-longest-segment (layout-recipes.md)
+      let bi = 0, blen = -1;
+      for (let i = 0; i < rel.points.length - 1; i++) {
+        const [x1, y1] = rel.points[i], [x2, y2] = rel.points[i + 1];
+        const len = Math.hypot(x2 - x1, y2 - y1);
+        if (len > blen) { blen = len; bi = i; }
+      }
+      const [x1, y1] = rel.points[bi], [x2, y2] = rel.points[bi + 1];
+      const isOnlySeg = rel.points.length === 2;
+      const frac = isOnlySeg ? 0.32 : 0.5, off = isOnlySeg ? 24 : 8;
+      const mx = x1 + (x2 - x1) * frac, my = y1 + (y2 - y1) * frac;
+      lx = y1 === y2 ? mx : mx + off; ly = y1 === y2 ? my - off : my;
+    }
+    s += `<text class="cd-lbl" x="${lx}" y="${ly}" text-anchor="middle" fill="#64748b" font-size="9.5" ${FM}>${escXml(rel.label)}</text>`;
+  }
+  return s;
+}
+
+function noteH(n) { return 34 + n.lines.length * 13 + 8; }
+function svgNote(n) {
+  const h = noteH(n), f = 14;
+  let o = '';
+  if (n.tether) o += `<polyline points="${n.tether.map(p => p.join(',')).join(' ')}" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+  o += `<path d="M${n.x},${n.y} H${n.x + n.w - f} L${n.x + n.w},${n.y + f} V${n.y + h} H${n.x} Z" fill="#fffbeb" stroke="#94a3b8" stroke-width="1.2"/>`;
+  o += `<path d="M${n.x + n.w - f},${n.y} V${n.y + f} H${n.x + n.w}" fill="none" stroke="#94a3b8" stroke-width="1.2"/>`;
+  o += `<text x="${n.x + 12}" y="${n.y + 20}" fill="#1e293b" font-size="11" font-weight="700" ${FM}>${escXml(n.title)}</text>`;
+  n.lines.forEach((l, i) => {
+    o += `<text class="note-txt" x="${n.x + 12}" y="${n.y + 38 + i * 13}" fill="#334155" font-size="9.5" ${FM} xml:space="preserve">${escXml(l)}</text>`;
+  });
+  return o;
+}
+
+// ── Hover highlight ─────────────────────────────────────────────────────────
+function wireHover(svg) {
+  svg.querySelectorAll('.cd-edge').forEach(function (line) {
+    const hit = line.cloneNode(false);
+    hit.removeAttribute('marker-start'); hit.removeAttribute('marker-end');
+    hit.removeAttribute('class');
+    hit.setAttribute('stroke', 'transparent');
+    hit.setAttribute('stroke-width', '16');
+    hit.setAttribute('fill', 'none');
+    hit.style.pointerEvents = 'stroke';
+    hit.style.cursor = 'pointer';
+    line.parentNode.insertBefore(hit, line.nextSibling);
+    const s0 = line.getAttribute('stroke');
+    const w0 = line.getAttribute('stroke-width');
+    let slot = null;
+    hit.addEventListener('mouseenter', function () {
+      slot = document.createComment('e'); hit.parentNode.insertBefore(slot, hit);
+      const p = hit.parentNode; p.appendChild(line); p.appendChild(hit);
+      line.setAttribute('stroke', '#e6007e');
+      line.setAttribute('stroke-width', String(Math.max(3.4, parseFloat(w0 || '1.8') + 1.6)));
+    });
+    hit.addEventListener('mouseleave', function () {
+      line.setAttribute('stroke', s0); if (w0) line.setAttribute('stroke-width', w0);
+      if (slot && slot.parentNode) {
+        slot.parentNode.insertBefore(line, slot);
+        slot.parentNode.insertBefore(hit, slot);
+        slot.remove();
+      }
+      slot = null;
+    });
+  });
+}
+
+function render() {
+  let maxX = 600, maxY = 400;
+  for (const cls of CLASSES) {
+    maxX = Math.max(maxX, cls.x + boxW(cls) + 60);
+    maxY = Math.max(maxY, cls.y + boxH(cls) + 96);
+  }
+  for (const n of NOTES) { maxX = Math.max(maxX, n.x + n.w + 30); maxY = Math.max(maxY, n.y + noteH(n) + 96); }
+
+  const defs = `<defs>
+    <pattern id="dotgrid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="12" cy="12" r="0.8" fill="#cbd5e1"/>
+    </pattern>
+    <marker id="genHollow" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto">
+      <polygon points="0,0 10,5 0,10" fill="white" stroke="#334155" stroke-width="1.5"/>
+    </marker>
+    <marker id="arrOpen" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polyline points="0,0 9,4 0,8" fill="none" stroke="#334155" stroke-width="1.5"/>
+    </marker>
+    <marker id="compFill" markerWidth="14" markerHeight="10" refX="1" refY="5" orient="auto">
+      <polygon points="0,5 7,0 14,5 7,10" fill="#1e40af" stroke="#1e40af"/>
+    </marker>
+  </defs>`;
+
+  const W = maxX, H = maxY;
+  const bg    = `<rect width="${W}" height="${H}" fill="#ffffff"/><rect width="${W}" height="${H}" fill="url(#dotgrid)"/>`;
+  const rels  = RELS.map(svgRel).join('');
+  const boxes = CLASSES.map(svgBox).join('');
+  const notes = NOTES.map(svgNote).join('');
+
+  const legendLine1 = '—— Association   ◆—— Composition   ——▷ Generalization   ⇢ Dependency («external system»)   ▭ dashed = enumeration';
+  const legendLine2 = 'Dotted tether = association class  |  multiplicity at both ends, role names in green italics  |  italic blue = operations (+ public, - private)  |  green outline = in scope of the programming part';
+  const legend = `<text x="16" y="${H - 64}" fill="#475569" font-size="9.5" font-weight="700" ${FM}>${legendLine1}</text>`
+               + `<text x="16" y="${H - 48}" fill="#64748b" font-size="9" ${FM}>${legendLine2}</text>`;
+
+  const svg = document.getElementById('diagram-svg');
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = defs + bg + rels + boxes + notes + legend;
+  wireHover(svg);
+  runLayoutChecks(svg);
+}
+
+// ── Layout validation: orthogonality, endpoints on boundaries, no box/label collisions ──
+function runLayoutChecks(svg) {
+  const errs = [];
+  const box = id => { const c = CLASSES.find(c => c.id === id); return c && { id, x: c.x, y: c.y, w: boxW(c), h: boxH(c) }; };
+  const boxes = CLASSES.map(c => box(c.id));
+  const noteBoxes = NOTES.map(n => ({ id: n.id, x: n.x, y: n.y, w: n.w, h: noteH(n) }));
+  const overlap = (a, b, m = 0) => a.x < b.x + b.w + m && b.x < a.x + a.w + m && a.y < b.y + b.h + m && b.y < a.y + a.h + m;
+  const onRect = (p, r) => {
+    const inX = p[0] >= r.x - .5 && p[0] <= r.x + r.w + .5, inY = p[1] >= r.y - .5 && p[1] <= r.y + r.h + .5;
+    return ((Math.abs(p[0] - r.x) < .5 || Math.abs(p[0] - r.x - r.w) < .5) && inY) ||
+           ((Math.abs(p[1] - r.y) < .5 || Math.abs(p[1] - r.y - r.h) < .5) && inX);
+  };
+  const segHits = (a, b, r, inset) => {
+    const x1 = Math.min(a[0], b[0]), x2 = Math.max(a[0], b[0]), y1 = Math.min(a[1], b[1]), y2 = Math.max(a[1], b[1]);
+    return x2 > r.x + inset && x1 < r.x + r.w - inset && y2 > r.y + inset && y1 < r.y + r.h - inset;
+  };
+  const all = [...boxes, ...noteBoxes];
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++)
+    if (overlap(all[i], all[j], 8)) errs.push(`too close: ${all[i].id} / ${all[j].id}`);
+  for (const r of RELS) {
+    for (let i = 0; i < r.points.length - 1; i++) {
+      const [a, b] = [r.points[i], r.points[i + 1]];
+      if (a[0] !== b[0] && a[1] !== b[1]) errs.push(`${r.id}: diagonal segment ${i}`);
+      for (const bx of all) {
+        if (bx.id === r.from || bx.id === r.to) continue;
+        if (segHits(a, b, bx, 1)) errs.push(`${r.id}: segment ${i} crosses ${bx.id}`);
+      }
+    }
+    if (r.type !== 'tether') {
+      if (!onRect(r.points[0], box(r.from))) errs.push(`${r.id}: start not on ${r.from}`);
+      if (!onRect(r.points[r.points.length - 1], box(r.to))) errs.push(`${r.id}: end not on ${r.to}`);
+    } else if (!onRect(r.points[r.points.length - 1], box(r.from)) && !onRect(r.points[0], box(r.from))) {
+      errs.push(`${r.id}: tether not on ${r.from}`);
+    }
+    // all segments of every other relationship, for label checks
+  }
+  for (const n of NOTES) if (n.tether) {
+    for (let i = 0; i < n.tether.length - 1; i++)
+      for (const bx of all) if (bx.id !== n.id && segHits(n.tether[i], n.tether[i + 1], bx, 1)) errs.push(`${n.id}: tether crosses ${bx.id}`);
+  }
+  // labels: not on a box, not on another label, not on any line segment
+  const lbls = [...svg.querySelectorAll('text.cd-lbl')].map(t => { const b = t.getBBox(); return { t: t.textContent, x: b.x, y: b.y + 1, w: b.width, h: b.height - 2 }; });
+  for (let i = 0; i < lbls.length; i++) {
+    const L = lbls[i];
+    for (const bx of all) if (overlap(L, bx)) errs.push(`label "${L.t}" on ${bx.id}`);
+    for (let j = i + 1; j < lbls.length; j++) if (overlap(L, lbls[j])) errs.push(`labels overlap "${L.t}" / "${lbls[j].t}"`);
+    for (const r of RELS) for (let k = 0; k < r.points.length - 1; k++)
+      if (segHits(r.points[k], r.points[k + 1], L, 0)) errs.push(`label "${L.t}" on line ${r.id}`);
+  }
+  // note text fits its note
+  for (const t of svg.querySelectorAll('text.note-txt')) {
+    const b = t.getBBox(); const n = noteBoxes.find(n => b.x >= n.x && b.x < n.x + n.w && b.y >= n.y && b.y < n.y + n.h);
+    if (n && b.x + b.width > n.x + n.w - 6) errs.push(`note text overflows ${n.id}`);
+  }
+  const out = document.getElementById('layout-check');
+  out.textContent = errs.length ? errs.join('\n') : 'OK';
+  console[errs.length ? 'warn' : 'log']('[layout-check]', errs.length ? errs : 'all checks passed');
+}
+
+// ── diagramModel (shared shape, walked by the VP/XMI exporter) ─────────────
+const diagramModel = {
+  kind: 'class',
+  title: 'Ben Tzion Wilker 1987 Ltd - Domain Class Diagram',
+  parts: [
+    {
+      id: 'part-1',
+      label: 'Full model',
+      splitRationale: '',
+      elements: CLASSES.map(c => ({
+        kind: 'class', id: c.id, name: c.name, isAbstract: c.isAbstract,
+        stereotype: c.isEnum ? 'enumeration' : c.isExternal ? 'external system' : (c.stereotype ? c.stereotype.replace(/«|»/g, '') : null),
+        inScope: !!c.inScope,
+        attributes: c.attrs.map(a => {
+          const m = a.match(/^([+\-#])\s*([^:]+?)\s*:\s*(.+)$/);
+          return m ? { visibility: m[1], name: m[2], type: m[3], defaultValue: null, constraint: null }
+                    : { visibility: '+', name: a, type: null, defaultValue: null, constraint: null };
+        }),
+        operations: c.ops.map(o => {
+          const m = o.match(/^([+\-#])\s*([A-Za-z0-9_]+)\(([^)]*)\)\s*(?::\s*(.+))?$/);
+          return m ? { visibility: m[1], name: m[2],
+                        params: m[3] ? m[3].split(',').map(p => { const [n, t] = p.split(':').map(s => s.trim()); return { name: n, type: t }; }) : [],
+                        returnType: m[4] || null }
+                    : { visibility: '+', name: o, params: [], returnType: null };
+        }),
+        x: c.x, y: c.y, w: boxW(c), h: boxH(c)
+      })),
+      relationships: (function () {
+        const out = [];
+        // r16 / r18 are the binary associations Attendance / EquipmentUsage attach to;
+        // in the export they are folded into the association class itself.
+        const FOLDED_INTO_ASSOC_CLASS = new Set(['r16', 'r18']);
+        for (const r of RELS) {
+          if (r.type === 'tether') continue;
+          if (FOLDED_INTO_ASSOC_CLASS.has(r.id)) continue;
+          if (r.type === 'gen') out.push({ kind: 'generalization', id: r.id, from: r.from, to: r.to });
+          else if (r.type === 'dep') out.push({ kind: 'dependency', id: r.id, from: r.from, to: r.to, stereotype: 'external system' });
+          else out.push({ kind: 'association', id: r.id, from: r.from, to: r.to,
+            multFrom: r.fromMult || null, multTo: r.toMult || null, roleFrom: r.fromRole || null, roleTo: r.toRole || null,
+            directed: false, aggregation: false, composition: r.type === 'comp' });
+        }
+        out.push({ kind: 'associationClass', id: 'ac1', classId: 'Attendance', ends: ['DailyWorkLog', 'Employee'] });
+        out.push({ kind: 'associationClass', id: 'ac2', classId: 'EquipmentUsage', ends: ['DailyWorkLog', 'Equipment'] });
+        return out;
+      })()
+    }
+  ],
+  assumptions: [
+    'Identifiers: only numbers that someone outside the system refers to are modelled (tenderNumber = MOD tender number, poNumber = printed on the PO sent to the supplier, invoiceNumber = the supplier invoice, licenseNumber = vehicle/machine licence plate). Surrogate database keys stay in the database, not in the diagram.',
+    'All attributes are private (-); operations that implement a state-diagram event are public (+); entry-wrapper methods and transition actions of the PurchaseOrder state diagram are private (-).',
+    'PurchaseOrder: totalAmount / vatAmount are not stored — calculateTotal() and calculateVat() derive them from the order lines, so they can never disagree with the lines.',
+    'POStatus lists one literal per state of the PurchaseOrder state diagram (11 values, incl. the composite states UnderApproval and InFulfillment). The setStatus(\'SCREAMING_SNAKE\') constants map 1:1 to these literals. closureReason is set on entry to Received / Cancelled so the outcome survives after Archived overwrites status; rejectionReason is filled by recordRejection(reason).',
+    'Every operation that appears in the PurchaseOrder state diagram (events, entry wrappers, transition actions, guard queries) appears in PurchaseOrder; receiveDelivery(line, qty) is the event, recordDelivery() the action it triggers.',
+    'Employee roles are an enumeration, not subclasses; a role gets its own association only where it acts on an object (projectManager, createdBy, approvedBy, overrideApprovedBy), constrained in the note by {role = ...}.',
+    'SupplierPriceQuote is a mediating class (three binary associations) replacing the former ternary association — a price depends on the supplier, the tender and the trade category together.',
+    'Project – EquipmentAssignment is a plain association: equipment assignments belong to a project but do not compose it.',
+    'PaymentRequest is composed of SubmittedDocument records; getMissingDocuments() derives what MOD still requires. The DocumentType values are illustrative and are to be confirmed with the company.',
+    'DailyWorkLog.status uses the WorkLogStatus enumeration (Submitted / UnderReview).',
+    'Attendance stores startTime / endTime; hoursWorked() is derived, with the constraint {endTime > startTime}.',
+    'Client is linked to Project only through Tender (Client 1--0..* Tender, Tender 1--0..1 Project), to avoid a redundant second path.',
+    'Subcontractor – DailyWorkLog is optional (0..1 on the Subcontractor side): a log may cover only the company\'s own crew.'
+  ],
+  openQuestions: []
+};
+
+// ── Association-class end data (Attendance / EquipmentUsage) for the XMI export ──
+const ASSOCIATION_CLASS_ENDS = {
+  Attendance: [
+    { type: 'DailyWorkLog', mult: '0..*' },
+    { type: 'Employee',     mult: '0..*' }
+  ],
+  EquipmentUsage: [
+    { type: 'DailyWorkLog', mult: '0..*' },
+    { type: 'Equipment',    mult: '0..*' }
+  ]
+};
+
+// ── VP / XMI export (export-buttons.md, class-diagram xmiBody) ─────────────
+function xmlEscape(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function downloadFile(filename, mimeType, content) {
+  const blob = new Blob([content], { type: mimeType });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'),
+                 { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
+function parseMult(m) {
+  if (!m) return null;
+  const known = { '1': ['1','1'], '0..1': ['0','1'], '0..*': ['0','*'], '1..*': ['1','*'] };
+  if (known[m]) return { lower: known[m][0], upper: known[m][1] };
+  const parts = String(m).split('..');
+  return { lower: parts[0], upper: parts[1] || parts[0] };
+}
+
+function roleNameFor(typeId) { return typeId.charAt(0).toLowerCase() + typeId.slice(1); }
+const VIS = v => v === '+' ? 'public' : v === '-' ? 'private' : 'protected';
+
+function ownedEndXml(endId, roleName, typeId, aggregation, mult, assocId, indent) {
+  const pm = parseMult(mult);
+  const agg = (aggregation && aggregation !== 'none') ? ` aggregation="${aggregation}"` : '';
+  let s = `${indent}<ownedEnd xmi:type="uml:Property" xmi:id="${endId}" name="${xmlEscape(roleName)}" type="${typeId}" association="${assocId}"${agg}>\n`;
+  if (pm) {
+    s += `${indent}  <lowerValue xmi:type="uml:LiteralInteger" xmi:id="${endId}_lo" value="${pm.lower}"/>\n`;
+    s += `${indent}  <upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="${endId}_up" value="${pm.upper}"/>\n`;
+  }
+  s += `${indent}</ownedEnd>`;
+  return s;
+}
+
+function xmiBody(elements, rels) {
+  const lines = [];
+  const genByChild = {};
+  for (const r of rels) if (r.kind === 'generalization') (genByChild[r.from] = genByChild[r.from] || []).push(r);
+
+  for (const el of elements) {
+    const acEnds = ASSOCIATION_CLASS_ENDS[el.id];
+    if (el.stereotype === 'enumeration') {
+      lines.push(`    <packagedElement xmi:type="uml:Enumeration" xmi:id="${el.id}" name="${xmlEscape(el.name)}">`);
+      for (const a of el.attributes)
+        lines.push(`      <ownedLiteral xmi:type="uml:EnumerationLiteral" xmi:id="${el.id}_${a.name}" name="${xmlEscape(a.name)}"/>`);
+      lines.push(`    </packagedElement>`);
+      continue;
+    }
+    const open = acEnds
+      ? `    <packagedElement xmi:type="uml:AssociationClass" xmi:id="${el.id}" name="${xmlEscape(el.name)}" memberEnd="${acEnds.map((_, i) => `${el.id}_end${i + 1}`).join(' ')}">`
+      : `    <packagedElement xmi:type="uml:Class" xmi:id="${el.id}" name="${xmlEscape(el.name)}"${el.isAbstract ? ' isAbstract="true"' : ''}>`;
+    lines.push(open);
+    for (const g of (genByChild[el.id] || []))
+      lines.push(`      <generalization xmi:type="uml:Generalization" xmi:id="${g.id}" general="${g.to}"/>`);
+    for (const a of el.attributes)
+      lines.push(`      <ownedAttribute xmi:id="${el.id}_${a.name}" name="${xmlEscape(a.name)}" visibility="${VIS(a.visibility)}"/>`);
+    for (const op of el.operations)
+      lines.push(`      <ownedOperation xmi:id="${el.id}_${op.name}" name="${xmlEscape(op.name)}" visibility="${VIS(op.visibility)}"/>`);
+    if (acEnds) acEnds.forEach((e, i) => lines.push(ownedEndXml(`${el.id}_end${i + 1}`, roleNameFor(e.type), e.type, 'none', e.mult, el.id, '      ')));
+    lines.push(`    </packagedElement>`);
+  }
+
+  for (const r of rels) {
+    if (r.kind === 'generalization' || r.kind === 'associationClass') continue;
+    if (r.kind === 'dependency') {
+      lines.push(`    <packagedElement xmi:type="uml:Dependency" xmi:id="${r.id}" client="${r.from}" supplier="${r.to}"/>`);
+      continue;
+    }
+    if (r.kind === 'association') {
+      // aggregation kind belongs on the end typed as the part (r.to)
+      const e1 = `${r.id}_e1`, e2 = `${r.id}_e2`;
+      const aggKind = r.composition ? 'composite' : 'none';
+      lines.push(`    <packagedElement xmi:type="uml:Association" xmi:id="${r.id}" memberEnd="${e1} ${e2}">`);
+      lines.push(ownedEndXml(e1, r.roleFrom || roleNameFor(r.from), r.from, 'none',  r.multFrom, r.id, '      '));
+      lines.push(ownedEndXml(e2, r.roleTo   || roleNameFor(r.to),   r.to,   aggKind, r.multTo,   r.id, '      '));
+      lines.push(`    </packagedElement>`);
+    }
+  }
+  return lines.join('\n');
+}
+function exportXMI() {
+  const m = diagramModel;
+  const title = xmlEscape(m.title || 'diagram');
+  const allElements = m.parts.flatMap(p => p.elements);
+  const allRelationships = m.parts.flatMap(p => p.relationships);
+  const body = xmiBody(allElements, allRelationships);
+
+  const xmi = `<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.1"
+  xmlns:xmi="http://www.omg.org/XMI"
+  xmlns:uml="http://www.eclipse.org/uml2/5.0.0/UML">
+  <uml:Model xmi:id="model_1" name="${title}">
+${body}
+  </uml:Model>
+</xmi:XMI>`;
+
+  downloadFile(title.replace(/\s+/g, '_') + '.xmi', 'application/xml', xmi);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(render);
+});
+  </script>
+</body>
+</html>

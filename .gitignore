@@ -1,0 +1,6 @@
+cloned/
+.mcp.json
+app.config
+bin/
+obj/
+.vs/

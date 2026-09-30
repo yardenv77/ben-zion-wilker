@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PurchaseOrder — State Diagram</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Noto+Sans+Hebrew:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f1f5f9; font-family: 'IBM Plex Mono', monospace; }
+  .title-bar { padding: 14px 20px 4px; }
+  .title-bar h1 { margin: 0; font-size: 17px; color: #0f172a; }
+  .title-bar p { margin: 4px 0 0; font-size: 11.5px; color: #64748b; }
+  .split-rationale { font-size: 11px; color: #64748b; padding: 0 20px 10px; }
+  .diagram-part { overflow-x: auto; }
+  svg { display: block; }
+  .vp-export-btn {
+    position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+    background: #1e40af; color: #fff; border: none; border-radius: 6px;
+    padding: 8px 16px; font-size: 13px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .vp-export-btn:hover { background: #1e3a8a; }
+  @media print { .vp-export-btn { display: none; } }
+</style>
+</head>
+<body>
+  <div class="title-bar">
+    <h1>Ben Tzion Wilker 1987 Ltd &mdash; PurchaseOrder State Diagram</h1>
+    <p>Lifecycle of a PurchaseOrder (UC-03 Create Purchase Order) &mdash; state constants match POStatus / ClosureReason in the domain class diagram</p>
+  </div>
+  <div class="split-rationale">No split &mdash; 9 simple states + 2 composite states (11 in total, one per POStatus literal), a single canvas.</div>
+
+  <div class="diagram-part" id="part-1">
+    <svg id="diagram-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+  <div id="layout-check" hidden></div>
+
+  <button class="vp-export-btn" onclick="exportXMI()">Download .xmi (Visual Paradigm)</button>
+
+<script>
+// ── Geometry (hand-placed lifecycle rows; every edge endpoint is verified to
+//    sit on its shape's boundary by runLayoutChecks() below) ────────────────
+const W = 1640, H = 1370;
+const NAME_H = 30, LINE_H = 14;
+const stateH = n => NAME_H + 10 + n * LINE_H + 6;
+
+const STATES = [
+  { id: 'Draft', x: 490, y: 90, w: 310, status: 'DRAFT',
+    lines: ["entry / setStatus('DRAFT')"] },
+  { id: 'UnderApproval', composite: true, x: 180, y: 240, w: 880, h: 240, status: 'UNDER_APPROVAL',
+    lines: ["entry / setStatus('UNDER_APPROVAL')"] },
+  { id: 'PendingPMApproval', parent: 'UnderApproval', x: 740, y: 350, w: 280, status: 'PENDING_PM_APPROVAL',
+    lines: ["entry / requestPMApproval()"] },
+  { id: 'PendingBudgetOverride', parent: 'UnderApproval', x: 280, y: 350, w: 290, status: 'PENDING_BUDGET_OVERRIDE',
+    lines: ["entry / flagForOverride()"] },
+  { id: 'Rejected', x: 1230, y: 290, w: 260, status: 'REJECTED',
+    lines: ["entry / returnToAccountant()"] },
+  { id: 'InFulfillment', composite: true, x: 180, y: 560, w: 880, h: 300, status: 'IN_FULFILLMENT',
+    lines: ["entry / setStatus('IN_FULFILLMENT')"] },
+  { id: 'Sent', parent: 'InFulfillment', x: 280, y: 683, w: 280, status: 'SENT',
+    lines: ["entry / markAsSent()"] },
+  { id: 'PartiallyReceived', parent: 'InFulfillment', x: 740, y: 690, w: 290, status: 'PARTIALLY_RECEIVED',
+    lines: ["entry / setStatus('PARTIALLY_RECEIVED')"] },
+  { id: 'Received', x: 240, y: 950, w: 280, status: 'RECEIVED',
+    lines: ["entry / closeAsReceived()"] },
+  { id: 'Cancelled', x: 780, y: 950, w: 280, status: 'CANCELLED',
+    lines: ["entry / closeAsCancelled()"] },
+  { id: 'Archived', x: 520, y: 1110, w: 260, status: 'ARCHIVED',
+    lines: ["entry / setStatus('ARCHIVED')"] }
+];
+STATES.forEach(s => { if (!s.composite) s.h = stateH(s.lines.length); });
+
+const PSEUDO = [
+  { id: 'init',       subKind: 'initial', cx: 560, cy: 40,  r: 8 },
+  { id: 'initIF',     subKind: 'initial', cx: 230, cy: 713, r: 8, parent: 'InFulfillment' },
+  { id: 'final',      subKind: 'final',   cx: 650, cy: 1250, r: 12 }
+];
+
+// label: array of lines; anchor/pos give the first baseline.
+// Colouring per line: [guard] cyan, "/ action" green, the rest = event.
+const TRANSITIONS = [
+  { id: 't0',  from: 'init', to: 'Draft', pts: [[560,48],[560,90]] },
+  { id: 't1',  from: 'Draft', to: 'Draft', self: 'M680,90 C680,50 730,50 730,90',
+    event: 'Line added or edited', action: 'recalculateTotals()',
+    label: ['Line added or edited / recalculateTotals()'], lx: 742, ly: 64, anchor: 'start' },
+  { id: 't2a', from: 'Draft', to: 'PendingBudgetOverride', pts: [[520,150],[520,350]],
+    event: 'Order submitted', guard: 'BR-2: over budget',
+    label: ['Order submitted', '[BR-2: over budget]'], lx: 512, ly: 190, anchor: 'end' },
+  { id: 't2b', from: 'Draft', to: 'PendingPMApproval', pts: [[770,150],[770,350]],
+    event: 'Order submitted', guard: 'BR-2: within budget',
+    label: ['Order submitted', '[BR-2: within budget]'], lx: 778, ly: 190, anchor: 'start' },
+  { id: 't3',  from: 'UnderApproval', to: 'Draft', pts: [[640,240],[640,150]],
+    event: 'Order withdrawn by accountant',
+    label: ['Order withdrawn', 'by accountant'], lx: 648, ly: 190, anchor: 'start' },
+  { id: 't4',  from: 'UnderApproval', to: 'Rejected', pts: [[1060,320],[1230,320]],
+    event: 'Order rejected', action: 'recordRejection(reason)',
+    label: ['Order rejected', '/ recordRejection(reason)'], lx: 1145, ly: 293, anchor: 'middle' },
+  { id: 't5',  from: 'Rejected', to: 'Draft', pts: [[1300,290],[1300,135],[800,135]],
+    event: 'Revision started',
+    label: ['Revision started'], lx: 1025, ly: 127, anchor: 'middle' },
+  { id: 't6',  from: 'Rejected', to: 'Cancelled', pts: [[1450,350],[1450,972],[1060,972]],
+    event: 'after(14 days from rejection)',
+    label: ['after(14 days from rejection)'], lx: 1240, ly: 962, anchor: 'middle' },
+  { id: 't7',  from: 'Draft', to: 'final', pts: [[490,120],[60,120],[60,1250],[638,1250]],
+    event: 'Order cancelled', guard: 'never submitted', action: 'delete()',
+    label: ['Order cancelled', '[never submitted]', '/ delete()'], lx: 68, ly: 506, anchor: 'start' },
+  { id: 't8',  from: 'Draft', to: 'Cancelled', pts: [[800,105],[1560,105],[1560,990],[1060,990]],
+    event: 'Order cancelled', guard: 'previously submitted',
+    label: ['Order cancelled [previously submitted]'], lx: 1430, ly: 97, anchor: 'middle' },
+  { id: 't10', from: 'PendingBudgetOverride', to: 'PendingPMApproval', pts: [[570,380],[740,380]],
+    event: 'Budget override approved by CEO',
+    label: ['Budget override', 'approved by CEO'], lx: 655, ly: 355, anchor: 'middle' },
+  { id: 't11', from: 'PendingPMApproval', to: 'InFulfillment', pts: [[880,410],[880,560]],
+    event: 'Order approved by PM',
+    label: ['Order approved by PM'], lx: 888, ly: 512, anchor: 'start' },
+  { id: 't13', from: 'initIF', to: 'Sent', pts: [[238,713],[280,713]] },
+  { id: 't14', from: 'Sent', to: 'PartiallyReceived', pts: [[560,713],[740,713]],
+    event: 'Delivery received', guard: 'BR-5: lines remain open', action: 'recordDelivery()',
+    label: ['Delivery received', '[BR-5: lines remain open]', '/ recordDelivery()'], lx: 650, ly: 666, anchor: 'middle' },
+  { id: 't15', from: 'PartiallyReceived', to: 'PartiallyReceived', self: 'M960,750 C960,795 1010,795 1010,750',
+    event: 'Delivery received', guard: 'BR-5: lines remain open', action: 'recordDelivery()',
+    label: ['Delivery received [BR-5: lines remain open]', '/ recordDelivery()'], lx: 946, ly: 792, anchor: 'end' },
+  { id: 't16', from: 'InFulfillment', to: 'Received', pts: [[380,860],[380,950]],
+    event: 'Delivery received', guard: 'BR-5: all lines fully received', action: 'recordDelivery()',
+    label: ['Delivery received', '[BR-5: all lines fully received]', '/ recordDelivery()'], lx: 388, ly: 885, anchor: 'start' },
+  { id: 't17', from: 'InFulfillment', to: 'Cancelled', pts: [[920,860],[920,950]],
+    event: 'Remaining order cancelled', guard: 'BR-4: supplier agreed',
+    label: ['Remaining order cancelled', '[BR-4: supplier agreed]'], lx: 928, ly: 892, anchor: 'start' },
+  { id: 't18', from: 'Received', to: 'Archived', pts: [[380,1010],[380,1140],[520,1140]],
+    event: 'Fiscal year closed', action: 'archive()',
+    label: ['Fiscal year closed / archive()'], lx: 388, ly: 1080, anchor: 'start' },
+  { id: 't19', from: 'Cancelled', to: 'Archived', pts: [[920,1010],[920,1140],[780,1140]],
+    event: 'Fiscal year closed', action: 'archive()',
+    label: ['Fiscal year closed / archive()'], lx: 912, ly: 1080, anchor: 'end' },
+  { id: 't20', from: 'Archived', to: 'final', pts: [[650,1170],[650,1238]],
+    event: 'after(7 years)', action: 'purge()',
+    label: ['after(7 years) / purge()'], lx: 658, ly: 1208, anchor: 'start' }
+];
+
+const NOTES = [
+  { x: 1085, y: 395, w: 355, title: 'Entry into UnderApproval', tether: [1060, 430],
+    lines: [
+      'Entered directly into a sub-state, selected',
+      'by BR-2 at submission (UC-03, steps 8-8a),',
+      'so the composite has no inner initial state.'
+    ] },
+  { x: 1085, y: 505, w: 355, title: 'Entry wrapper methods',
+    lines: [
+      'flagForOverride():',
+      '   setStatus(\'PENDING_BUDGET_OVERRIDE\'); notifyCEO()',
+      'requestPMApproval():',
+      '   setStatus(\'PENDING_PM_APPROVAL\'); notifyProjectManager()',
+      'returnToAccountant():',
+      '   setStatus(\'REJECTED\'); notifyAccountant()',
+      'markAsSent():',
+      '   setStatus(\'SENT\'); sendPOEmailToSupplier()',
+      'closeAsReceived():',
+      '   setStatus(\'RECEIVED\'); setClosureReason(\'RECEIVED\')',
+      'closeAsCancelled():',
+      '   setStatus(\'CANCELLED\'); setClosureReason(\'CANCELLED\')'
+    ] },
+  { x: 1110, y: 1050, w: 380, title: 'Business Rules',
+
+    lines: [
+      'BR-1: An order that was never submitted may be deleted;',
+      '      a submitted order is cancelled and archived.',
+      'BR-2: An order exceeding the remaining budget line needs a',
+      '      CEO budget override before PM approval (UC-03, 8a).',
+      'BR-3: A rejected order not revised within 14 days is',
+      '      cancelled automatically (quotes valid ~2 weeks).',
+      'BR-4: Cancelling the remainder of a sent order requires',
+      '      supplier agreement.',
+      'BR-5: An order is Received only when receivedQuantity equals',
+      '      quantity on every PurchaseOrderLine.',
+      'Retention: 7 years - a purchase order is a financial record',
+      '      (bookkeeping regulations). closureReason is kept when',
+      '      Archived overwrites status.'
+    ] }
+];
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+const FM = 'font-family="IBM Plex Mono, monospace"';
+const byId = id => STATES.find(s => s.id === id) || PSEUDO.find(p => p.id === id);
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function svgState(s) {
+  let o = '';
+  if (s.composite) {
+    o += `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="20" ry="20" fill="#f0f7ff" stroke="#2563eb" stroke-width="2" stroke-dasharray="8 4"/>`;
+    o += `<text x="${s.x + s.w/2}" y="${s.y + 16}" text-anchor="middle" fill="#475569" font-size="9" ${FM}>«composite»</text>`;
+    o += `<text x="${s.x + s.w/2}" y="${s.y + 33}" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="700" ${FM}>${esc(s.id)}</text>`;
+    o += `<line x1="${s.x}" y1="${s.y + 42}" x2="${s.x + s.w}" y2="${s.y + 42}" stroke="#3b82f6" stroke-width="1"/>`;
+    s.lines.forEach((l, i) => {
+      o += `<text x="${s.x + 14}" y="${s.y + 58 + i * LINE_H}" fill="#334155" font-size="10" font-style="italic" ${FM} xml:space="preserve">${esc(l)}</text>`;
+    });
+    return o;
+  }
+  o += `<rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="18" ry="18" fill="white" stroke="#3b82f6" stroke-width="2"/>`;
+  // tinted name compartment: clip the rounded top only
+  o += `<path d="M${s.x + 18},${s.y + 1} H${s.x + s.w - 18} A17,17 0 0 1 ${s.x + s.w - 1},${s.y + 18} V${s.y + NAME_H} H${s.x + 1} V${s.y + 18} A17,17 0 0 1 ${s.x + 18},${s.y + 1} Z" fill="#eef4ff"/>`;
+  o += `<text x="${s.x + s.w/2}" y="${s.y + 20}" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="700" ${FM}>${esc(s.id)}</text>`;
+  o += `<line x1="${s.x}" y1="${s.y + NAME_H}" x2="${s.x + s.w}" y2="${s.y + NAME_H}" stroke="#3b82f6" stroke-width="1"/>`;
+  s.lines.forEach((l, i) => {
+    o += `<text x="${s.x + 12}" y="${s.y + NAME_H + 18 + i * LINE_H}" fill="#334155" font-size="10" font-style="italic" ${FM} xml:space="preserve">${esc(l)}</text>`;
+  });
+  return o;
+}
+
+function svgPseudo(p) {
+  if (p.subKind === 'initial') return `<circle cx="${p.cx}" cy="${p.cy}" r="8" fill="#1e293b"/>`;
+  return `<circle cx="${p.cx}" cy="${p.cy}" r="12" fill="none" stroke="#1e293b" stroke-width="2"/>` +
+         `<circle cx="${p.cx}" cy="${p.cy}" r="7" fill="#1e293b"/>`;
+}
+
+function labelTspans(line) {
+  // split into event / [guard] / "/ action" runs
+  const out = [];
+  const re = /(\[[^\]]*\])|(\/ .*$)/g;
+  let last = 0, m;
+  while ((m = re.exec(line)) !== null) {
+    if (m.index > last) out.push({ t: line.slice(last, m.index), c: '#334155' });
+    out.push({ t: m[0], c: m[1] ? '#0891b2' : '#15803d' });
+    last = m.index + m[0].length;
+  }
+  if (last < line.length) out.push({ t: line.slice(last), c: '#334155' });
+  return out.map(r => `<tspan fill="${r.c}">${esc(r.t)}</tspan>`).join('');
+}
+
+function svgTransition(t) {
+  let o = '';
+  if (t.self) {
+    o += `<path class="tr" data-id="${t.id}" d="${t.self}" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>`;
+  } else {
+    const pts = t.pts.map(p => p.join(',')).join(' ');
+    o += `<polyline class="tr" data-id="${t.id}" points="${pts}" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>`;
+  }
+  return o;
+}
+
+function svgLabel(t) {
+  if (!t.label) return '';
+  return t.label.map((l, i) =>
+    `<text class="tl" data-id="${t.id}" x="${t.lx}" y="${t.ly + i * LINE_H}" text-anchor="${t.anchor}" font-size="10" ${FM} xml:space="preserve">${labelTspans(l)}</text>`
+  ).join('');
+}
+
+function svgNote(n) {
+  const h = 34 + n.lines.length * 13 + 8;
+  n.h = h;
+  const f = 14;
+  let o = `<path d="M${n.x},${n.y} H${n.x + n.w - f} L${n.x + n.w},${n.y + f} V${n.y + h} H${n.x} Z" fill="#fffbeb" stroke="#94a3b8" stroke-width="1.2"/>`;
+  o += `<path d="M${n.x + n.w - f},${n.y} V${n.y + f} H${n.x + n.w}" fill="none" stroke="#94a3b8" stroke-width="1.2"/>`;
+  o += `<text x="${n.x + 12}" y="${n.y + 20}" fill="#1e293b" font-size="11" font-weight="700" ${FM}>${esc(n.title)}</text>`;
+  if (n.tether) o += `<line x1="${n.x}" y1="${n.tether[1]}" x2="${n.tether[0]}" y2="${n.tether[1]}" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+  n.lines.forEach((l, i) => {
+    o += `<text x="${n.x + 12}" y="${n.y + 38 + i * 13}" fill="#334155" font-size="9.5" ${FM} xml:space="preserve">${esc(l)}</text>`;
+  });
+  return o;
+}
+
+function render() {
+  const svg = document.getElementById('diagram-svg');
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const defs = `<defs>
+    <pattern id="dotgrid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="12" cy="12" r="0.8" fill="#cbd5e1"/>
+    </pattern>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#334155"/>
+    </marker>
+  </defs>`;
+  const bg = `<rect width="${W}" height="${H}" fill="#f8fafc"/><rect width="${W}" height="${H}" fill="url(#dotgrid)"/>`;
+  // composites first (behind), then simple states
+  const comps  = STATES.filter(s => s.composite).map(svgState).join('');
+  const simple = STATES.filter(s => !s.composite).map(svgState).join('');
+  const pseudo = PSEUDO.map(svgPseudo).join('');
+  const edges  = TRANSITIONS.map(svgTransition).join('');
+  const labels = `<g id="labels">${TRANSITIONS.map(svgLabel).join('')}</g>`;
+  const notes  = NOTES.map(svgNote).join('');
+  const legend =
+    `<text x="20" y="${H - 34}" fill="#475569" font-size="10" font-weight="700" ${FM}>● Initial   ◎ Final   ▢ State (rounded)   ┅ Composite state (dashed)   ──▶ Transition</text>` +
+    `<text x="20" y="${H - 18}" fill="#64748b" font-size="10" ${FM}>Label format: event <tspan fill="#0891b2">[guard]</tspan> <tspan fill="#15803d">/ action</tspan>   |   italic = entry / exit / do activities   |   an arrow on a composite border applies to every sub-state</text>`;
+  svg.innerHTML = defs + bg + comps + simple + pseudo + edges + labels + notes + legend;
+
+  // white background behind every transition-label line
+  svg.querySelectorAll('text.tl').forEach(tx => {
+    const b = tx.getBBox();
+    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r.setAttribute('x', b.x - 3); r.setAttribute('y', b.y - 1);
+    r.setAttribute('width', b.width + 6); r.setAttribute('height', b.height + 2);
+    r.setAttribute('rx', 3); r.setAttribute('fill', 'white'); r.setAttribute('class', 'tlbg');
+    tx.parentNode.insertBefore(r, tx);
+  });
+  wireEdgeHover();
+  runLayoutChecks(svg);
+}
+
+// ── Layout validation (orthogonality, boundary endpoints, overlaps) ────────
+function runLayoutChecks(svg) {
+  const errs = [];
+  const rectOf = s => ({ x: s.x, y: s.y, w: s.w, h: s.h });
+  const ancestors = id => { const a = []; let s = STATES.find(v => v.id === id) || PSEUDO.find(v => v.id === id);
+    while (s && s.parent) { a.push(s.parent); s = STATES.find(v => v.id === s.parent); } return a; };
+  const onRect = (p, r) => {
+    const inX = p[0] >= r.x - .5 && p[0] <= r.x + r.w + .5, inY = p[1] >= r.y - .5 && p[1] <= r.y + r.h + .5;
+    const onV = Math.abs(p[0] - r.x) < .5 || Math.abs(p[0] - r.x - r.w) < .5;
+    const onH = Math.abs(p[1] - r.y) < .5 || Math.abs(p[1] - r.y - r.h) < .5;
+    return (onV && inY) || (onH && inX);
+  };
+  const onShape = (p, id) => {
+    const s = byId(id);
+    if (s.subKind) return Math.abs(Math.hypot(p[0] - s.cx, p[1] - s.cy) - s.r) < .5;
+    return onRect(p, rectOf(s));
+  };
+  const segHitsRect = (a, b, r, inset) => {
+    const x1 = Math.min(a[0], b[0]), x2 = Math.max(a[0], b[0]), y1 = Math.min(a[1], b[1]), y2 = Math.max(a[1], b[1]);
+    return x2 > r.x + inset && x1 < r.x + r.w - inset && y2 > r.y + inset && y1 < r.y + r.h - inset;
+  };
+  const boxesOverlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+  // 1. orthogonal + endpoints + no crossing through foreign states
+  for (const t of TRANSITIONS) {
+    if (t.self) continue;
+    for (let i = 0; i < t.pts.length - 1; i++) {
+      const [a, b] = [t.pts[i], t.pts[i + 1]];
+      if (a[0] !== b[0] && a[1] !== b[1]) errs.push(`${t.id}: diagonal segment ${i}`);
+      for (const s of STATES) {
+        if (s.id === t.from || s.id === t.to) continue;
+        if (ancestors(t.from).includes(s.id) || ancestors(t.to).includes(s.id)) continue;
+        if (segHitsRect(a, b, rectOf(s), 1)) errs.push(`${t.id}: segment ${i} crosses ${s.id}`);
+      }
+    }
+    if (!onShape(t.pts[0], t.from)) errs.push(`${t.id}: start not on ${t.from} boundary`);
+    if (!onShape(t.pts[t.pts.length - 1], t.to)) errs.push(`${t.id}: end not on ${t.to} boundary`);
+    if (t.id !== 't0' && t.id !== 't9' && t.id !== 't13' && !t.event) errs.push(`${t.id}: missing event`);
+  }
+  // 2. state boxes: siblings must not overlap; children inside parent
+  const leaf = STATES.filter(s => !s.composite);
+  for (let i = 0; i < STATES.length; i++) for (let j = i + 1; j < STATES.length; j++) {
+    const a = STATES[i], b = STATES[j];
+    if (a.parent === b.id || b.parent === a.id) continue;
+    if (boxesOverlap(rectOf(a), rectOf(b))) errs.push(`states overlap: ${a.id} / ${b.id}`);
+  }
+  for (const s of STATES.filter(s => s.parent)) {
+    const p = byId(s.parent);
+    if (!(s.x > p.x && s.y > p.y + 66 && s.x + s.w < p.x + p.w && s.y + s.h < p.y + p.h)) errs.push(`${s.id} not inside ${p.id} body`);
+  }
+  // 3. labels: vs each other, vs states, vs composite borders/headers, vs every edge, vs notes
+  const lbl = [...svg.querySelectorAll('rect.tlbg')].map(r => ({
+    id: r.nextSibling.dataset.id, x: +r.getAttribute('x'), y: +r.getAttribute('y'), w: +r.getAttribute('width'), h: +r.getAttribute('height') }));
+  for (let i = 0; i < lbl.length; i++) for (let j = i + 1; j < lbl.length; j++)
+    if (lbl[i].id !== lbl[j].id && boxesOverlap(lbl[i], lbl[j])) errs.push(`labels overlap: ${lbl[i].id} / ${lbl[j].id}`);
+  for (const L of lbl) {
+    for (const s of leaf) if (boxesOverlap(L, rectOf(s))) errs.push(`label ${L.id} overlaps state ${s.id}`);
+    for (const c of STATES.filter(s => s.composite)) {
+      const edges = [[[c.x, c.y], [c.x + c.w, c.y]], [[c.x, c.y + c.h], [c.x + c.w, c.y + c.h]],
+                     [[c.x, c.y], [c.x, c.y + c.h]], [[c.x + c.w, c.y], [c.x + c.w, c.y + c.h]]];
+      for (const [a, b] of edges) if (segHitsRect(a, b, L, 0)) errs.push(`label ${L.id} crosses border of ${c.id}`);
+      if (boxesOverlap(L, { x: c.x, y: c.y, w: c.w, h: 66 })) errs.push(`label ${L.id} overlaps header of ${c.id}`);
+    }
+    for (const t of TRANSITIONS) {
+      if (t.self) {
+        const path = svg.querySelector(`path.tr[data-id="${t.id}"]`), len = path.getTotalLength();
+        for (let k = 0; k <= 40; k++) { const q = path.getPointAtLength(len * k / 40);
+          if (q.x > L.x && q.x < L.x + L.w && q.y > L.y && q.y < L.y + L.h) { errs.push(`label ${L.id} sits on loop ${t.id}`); break; } }
+        continue;
+      }
+      for (let i = 0; i < t.pts.length - 1; i++)
+        if (segHitsRect(t.pts[i], t.pts[i + 1], L, 0)) errs.push(`label ${L.id} sits on edge ${t.id}`);
+    }
+    for (const n of NOTES) if (boxesOverlap(L, n)) errs.push(`label ${L.id} overlaps note`);
+  }
+  // 4. edges vs notes, pseudostates inside canvas
+  for (const t of TRANSITIONS) if (!t.self) for (let i = 0; i < t.pts.length - 1; i++)
+    for (const n of NOTES) if (segHitsRect(t.pts[i], t.pts[i + 1], n, 0)) errs.push(`edge ${t.id} crosses note`);
+  const out = document.getElementById('layout-check');
+  out.dataset.errors = JSON.stringify(errs);
+  out.textContent = errs.length ? errs.join('\n') : 'OK';
+  console[errs.length ? 'warn' : 'log']('[layout-check]', errs.length ? errs : 'all checks passed');
+}
+
+// ── §7b Transition hover-highlight (verbatim) ──────────────────────────────
+function wireEdgeHover() {
+  document.querySelectorAll('svg [marker-end]').forEach(function (line) {
+    if (line.dataset.hoverWired) return;
+    line.dataset.hoverWired = '1';
+    const hit = line.cloneNode(false);
+    hit.removeAttribute('marker-end'); hit.removeAttribute('marker-start');
+    hit.setAttribute('stroke', 'transparent');
+    hit.setAttribute('stroke-width', '16');
+    hit.setAttribute('fill', 'none');
+    hit.style.pointerEvents = 'stroke';
+    hit.style.cursor = 'pointer';
+    line.parentNode.insertBefore(hit, line.nextSibling); // transparent overlay on top
+    const s0 = line.getAttribute('stroke') || '#334155';
+    const w0 = line.getAttribute('stroke-width') || '1.8';
+    let slot = null;
+    hit.addEventListener('mouseenter', function () {
+      slot = document.createComment('e'); hit.parentNode.insertBefore(slot, hit);
+      const p = hit.parentNode; p.appendChild(line); p.appendChild(hit); // lift to front
+      line.setAttribute('stroke', '#e6007e');
+      line.setAttribute('stroke-width', String(Math.max(3.4, parseFloat(w0) + 1.6)));
+    });
+    hit.addEventListener('mouseleave', function () {
+      line.setAttribute('stroke', s0); line.setAttribute('stroke-width', w0);
+      if (slot && slot.parentNode) {
+        slot.parentNode.insertBefore(line, slot);
+        slot.parentNode.insertBefore(hit, slot);
+        slot.remove();
+      }
+      slot = null;
+    });
+  });
+}
+
+// ── diagramModel (model-shape.md, kind: 'state') ───────────────────────────
+function modelState(s) {
+  const entry = s.lines.join(' ').replace(/^entry \/ /, '').replace(/\s+/g, ' ').split(';').map(x => x.trim()).filter(Boolean);
+  return { kind: 'state', id: s.id, name: s.id, isComposite: !!s.composite,
+    statusConstant: s.status, activities: { entry, exit: [], do: [] },
+    x: s.x, y: s.y, w: s.w, h: s.h,
+    subElements: [
+      ...STATES.filter(c => c.parent === s.id).map(modelState),
+      ...PSEUDO.filter(p => p.parent === s.id).map(p => ({ kind: 'pseudostate', id: p.id, subKind: p.subKind, x: p.cx, y: p.cy }))
+    ] };
+}
+const diagramModel = {
+  kind: 'state',
+  title: 'PurchaseOrder State Diagram',
+  parts: [{
+    id: 'part-1', label: 'PurchaseOrder lifecycle', splitRationale: '',
+    elements: [
+      ...PSEUDO.filter(p => !p.parent).map(p => ({ kind: 'pseudostate', id: p.id, subKind: p.subKind, x: p.cx, y: p.cy })),
+      ...STATES.filter(s => !s.parent).map(modelState)
+    ],
+    relationships: TRANSITIONS.map(t => ({ kind: 'transition', id: t.id, from: t.from, to: t.to,
+      event: t.event || '', guard: t.guard || '', action: t.action || '', isSelf: t.from === t.to }))
+  }]
+};
+
+// ── VP / XMI export (export-buttons.md, state-diagram xmiBody) ─────────────
+function xmlEscape(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+function downloadFile(filename, mimeType, content) {
+  const blob = new Blob([content], { type: mimeType });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'),
+                 { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+function xmiBody(elements, rels) {
+  const lines = [];
+  lines.push(`    <packagedElement xmi:type="uml:StateMachine" xmi:id="sm_1" name="${xmlEscape(diagramModel.title)}">`);
+  lines.push(`      <region xmi:type="uml:Region" xmi:id="region_1">`);
+  const emit = (el, ind) => {
+    if (el.kind === 'pseudostate') {
+      lines.push(`${ind}<subvertex xmi:type="uml:Pseudostate" xmi:id="${el.id}" kind="${el.subKind === 'final' ? 'final' : 'initial'}"/>`);
+      return;
+    }
+    if (!el.isComposite) {
+      lines.push(`${ind}<subvertex xmi:type="uml:State" xmi:id="${el.id}" name="${xmlEscape(el.name)}"/>`);
+      return;
+    }
+    lines.push(`${ind}<subvertex xmi:type="uml:State" xmi:id="${el.id}" name="${xmlEscape(el.name)}">`);
+    lines.push(`${ind}  <region xmi:type="uml:Region" xmi:id="${el.id}_region">`);
+    el.subElements.forEach(c => emit(c, ind + '    '));
+    lines.push(`${ind}  </region>`);
+    lines.push(`${ind}</subvertex>`);
+  };
+  for (const el of elements) emit(el, '        ');
+  for (const r of rels) {
+    if (r.kind === 'transition') {
+      const name = [r.event, r.guard ? `[${r.guard}]` : '', r.action ? `/ ${r.action}` : ''].filter(Boolean).join(' ');
+      lines.push(`        <transition xmi:type="uml:Transition" xmi:id="${r.id}" source="${r.from}" target="${r.to}"${name ? ` name="${xmlEscape(name)}"` : ''}/>`);
+    }
+  }
+  lines.push(`      </region>`);
+  lines.push(`    </packagedElement>`);
+  return lines.join('\n');
+}
+function exportXMI() {
+  const m = diagramModel;
+  const title = xmlEscape(m.title || 'diagram');
+  const allElements = m.parts.flatMap(p => p.elements);
+  const allRelationships = m.parts.flatMap(p => p.relationships);
+  const body = xmiBody(allElements, allRelationships);
+  const xmi = `<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.1"
+  xmlns:xmi="http://www.omg.org/XMI"
+  xmlns:uml="http://www.eclipse.org/uml2/5.0.0/UML">
+  <uml:Model xmi:id="model_1" name="${title}">
+${body}
+  </uml:Model>
+</xmi:XMI>`;
+  downloadFile(title.replace(/\s+/g, '_') + '.xmi', 'application/xml', xmi);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(render);
+});
+</script>
+</body>
+</html>
