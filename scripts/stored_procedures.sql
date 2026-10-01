@@ -1047,11 +1047,12 @@ CREATE PROCEDURE sp_purchase_order_create
     @rejectionReason NVARCHAR(MAX),
     @closureReason NVARCHAR(20),
     @rejectedAt DATETIME2,
-    @archivedAt DATETIME2
+    @archivedAt DATETIME2,
+    @everSubmitted BIT
 AS
 BEGIN
-    INSERT INTO PurchaseOrder (purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt)
-    VALUES (@purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason, @rejectedAt, @archivedAt);
+    INSERT INTO PurchaseOrder (purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt, everSubmitted)
+    VALUES (@purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason, @rejectedAt, @archivedAt, @everSubmitted);
 END
 GO
 
@@ -1093,7 +1094,7 @@ GO
 CREATE PROCEDURE sp_purchase_order_get_all
 AS
 BEGIN
-    SELECT purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt
+    SELECT purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt, everSubmitted
     FROM PurchaseOrder;
 END
 GO
@@ -1102,7 +1103,7 @@ CREATE PROCEDURE sp_purchase_order_get_by_id
     @purchase_order_id INT
 AS
 BEGIN
-    SELECT purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt
+    SELECT purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt, everSubmitted
     FROM PurchaseOrder
     WHERE purchase_order_id = @purchase_order_id;
 END
@@ -1512,7 +1513,7 @@ AS
 BEGIN
     BEGIN TRY
         BEGIN TRAN;
-        UPDATE PurchaseOrder SET status = @new_status WHERE purchase_order_id = @purchase_order_id;
+        UPDATE PurchaseOrder SET status = @new_status, everSubmitted = 1 WHERE purchase_order_id = @purchase_order_id;
         COMMIT TRAN;
     END TRY
     BEGIN CATCH
@@ -1926,15 +1927,18 @@ BEGIN
     BEGIN TRY
         BEGIN TRAN;
 
+        -- everSubmitted = 1: this flow inserts straight into a Pending* status, never
+        -- Draft, so by the time this row exists it has already (functionally) left Draft --
+        -- the BR-1 guard cancel() reads must not treat it as "never submitted".
         INSERT INTO PurchaseOrder (
             purchase_order_id, poNumber, supplier_id, project_id,
             created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id,
-            orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason
+            orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, everSubmitted
         )
         VALUES (
             @purchase_order_id, @poNumber, @supplier_id, @project_id,
             @created_by_employee_id, NULL, NULL,
-            @orderDate, @total_amount, @vat_amount, @status, NULL, NULL
+            @orderDate, @total_amount, @vat_amount, @status, NULL, NULL, 1
         );
 
         INSERT INTO PurchaseOrderLine (

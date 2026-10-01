@@ -22,11 +22,12 @@ namespace BenZionVilker
         private ClosureReason? closureReason; // nullable: only set on entry to Received/Cancelled
         private DateTime? rejectedAt; // nullable: BR-3 guard support, set on entry to Rejected, cleared by revise()
         private DateTime? archivedAt; // nullable: 7-year retention guard support, set on entry to Archived
+        private bool everSubmitted; // BR-1 guard: has this order ever left Draft? See submit()/cancel()
 
         public PurchaseOrder(int purchaseOrderId, string poNumber, Supplier supplier, Project project,
             Employee createdBy, Employee approvedBy, Employee overrideApprovedBy, DateTime orderDate,
             decimal totalAmount, decimal vatAmount, POStatus status, string rejectionReason, ClosureReason? closureReason,
-            DateTime? rejectedAt, DateTime? archivedAt, bool is_new)
+            DateTime? rejectedAt, DateTime? archivedAt, bool everSubmitted, bool is_new)
         {
             this.purchaseOrderId = purchaseOrderId;
             this.poNumber = poNumber;
@@ -43,6 +44,7 @@ namespace BenZionVilker
             this.closureReason = closureReason;
             this.rejectedAt = rejectedAt;
             this.archivedAt = archivedAt;
+            this.everSubmitted = everSubmitted;
             if (is_new)
             {
                 this.createPurchaseOrder();
@@ -86,7 +88,7 @@ namespace BenZionVilker
         public void createPurchaseOrder()
         {
             SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_purchase_order_create @purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason, @rejectedAt, @archivedAt";
+            cmd.CommandText = "EXECUTE sp_purchase_order_create @purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason, @rejectedAt, @archivedAt, @everSubmitted";
             cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
             cmd.Parameters.AddWithValue("@poNumber", this.poNumber);
             cmd.Parameters.AddWithValue("@supplier_id", this.supplier.getBusinessPartnerId());
@@ -102,6 +104,7 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@closureReason", (object)this.closureReason?.ToString() ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@rejectedAt", (object)this.rejectedAt ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@archivedAt", (object)this.archivedAt ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@everSubmitted", this.everSubmitted);
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
         }
@@ -161,9 +164,10 @@ namespace BenZionVilker
                 ClosureReason? closureReason = rdr.GetValue(12) == DBNull.Value ? (ClosureReason?)null : (ClosureReason)Enum.Parse(typeof(ClosureReason), rdr.GetValue(12).ToString());
                 DateTime? rejectedAt = rdr.GetValue(13) == DBNull.Value ? (DateTime?)null : DateTime.Parse(rdr.GetValue(13).ToString());
                 DateTime? archivedAt = rdr.GetValue(14) == DBNull.Value ? (DateTime?)null : DateTime.Parse(rdr.GetValue(14).ToString());
+                bool everSubmitted = Convert.ToBoolean(rdr.GetValue(15));
 
                 PurchaseOrder po = new PurchaseOrder(id, poNumber, supplier, project, createdBy, approvedBy, overrideApprovedBy,
-                    orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt, false);
+                    orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt, everSubmitted, false);
                 Program.PurchaseOrders.Add(po);
             }
         }
@@ -195,10 +199,6 @@ namespace BenZionVilker
         // updatePurchaseOrder(). Each guard failure throws with a Hebrew
         // message the panel shows via MessageBox (step 7.5).
         // ====================================================================
-
-        // BR-1 guard: has this PO ever left Draft? In-memory only, per session -- unlike
-        // rejectedAt/archivedAt above, this one is NOT persisted (flagged, not yet fixed).
-        private bool everSubmitted = false;
 
         public bool exceedsBudget()
         {

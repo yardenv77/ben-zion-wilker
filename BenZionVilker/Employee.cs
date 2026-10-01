@@ -223,8 +223,11 @@ namespace BenZionVilker
             // is_new: false everywhere below -- the procedure already inserted both
             // tables; constructing with is_new: true would call createPurchaseOrder()/
             // createPurchaseOrderLine() again and try to INSERT the same rows twice.
+            // everSubmitted: true -- this flow inserts straight into a Pending* status
+            // (sp_purchase_order_create_flow), never Draft, matching what that procedure
+            // itself writes to the everSubmitted column.
             PurchaseOrder po = new PurchaseOrder(purchaseOrderId, poNumber, supplier, project, this, null, null,
-                orderDate, resultTotal, resultVat, resultStatus, null, null, null, null, false);
+                orderDate, resultTotal, resultVat, resultStatus, null, null, null, null, true, false);
             Program.PurchaseOrders.Add(po);
 
             for (int i = 0; i < lines.Count; i++)
