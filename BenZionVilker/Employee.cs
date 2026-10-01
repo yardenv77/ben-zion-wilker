@@ -224,7 +224,7 @@ namespace BenZionVilker
             // tables; constructing with is_new: true would call createPurchaseOrder()/
             // createPurchaseOrderLine() again and try to INSERT the same rows twice.
             PurchaseOrder po = new PurchaseOrder(purchaseOrderId, poNumber, supplier, project, this, null, null,
-                orderDate, resultTotal, resultVat, resultStatus, null, null, false);
+                orderDate, resultTotal, resultVat, resultStatus, null, null, null, null, false);
             Program.PurchaseOrders.Add(po);
 
             for (int i = 0; i < lines.Count; i++)

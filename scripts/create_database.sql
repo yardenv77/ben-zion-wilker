@@ -256,6 +256,8 @@ CREATE TABLE PurchaseOrder (
     status NVARCHAR(30) NOT NULL, -- widened from the default NVARCHAR(20): 'PendingBudgetOverride' is 21 characters
     rejectionReason NVARCHAR(MAX) NULL, -- nullable: only set when status is/was Rejected (recordRejection(reason))
     closureReason NVARCHAR(20) NULL, -- nullable: only set on entry to Received/Cancelled, preserved through Archived
+    rejectedAt DATETIME2 NULL, -- nullable: set on entry to Rejected, cleared on revise() back to Draft -- persists the BR-3 14-day auto-cancel guard across app restarts
+    archivedAt DATETIME2 NULL, -- nullable: set on entry to Archived -- persists the 7-year purge() retention guard across app restarts
     CONSTRAINT CK_PurchaseOrder_Status CHECK (status IN (N'Draft', N'UnderApproval', N'PendingPMApproval', N'PendingBudgetOverride', N'Rejected', N'InFulfillment', N'Sent', N'PartiallyReceived', N'Received', N'Cancelled', N'Archived')),
     CONSTRAINT CK_PurchaseOrder_ClosureReason CHECK (closureReason IS NULL OR closureReason IN (N'Received', N'Cancelled')),
     CONSTRAINT FK_PurchaseOrder_Supplier FOREIGN KEY (supplier_id)

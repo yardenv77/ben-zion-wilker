@@ -294,7 +294,7 @@ namespace BenZionVilker
             new PurchaseOrder(id, textBox_poNumber.Text, resolveSelectedSupplier(), resolveSelectedProject(),
                 resolveSelectedCreatedBy(), null, null,
                 DateTime.Parse(textBox_orderDate.Text), decimal.Parse(textBox_totalAmount.Text), decimal.Parse(textBox_vatAmount.Text),
-                POStatus.Draft, null, null, true);
+                POStatus.Draft, null, null, null, null, true);
 
             MessageBox.Show("הזמנת הרכש נשמרה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();

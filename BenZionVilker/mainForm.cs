@@ -15,9 +15,11 @@ namespace BenZionVilker
         {
             InitializeComponent();
             instance = this;
-            // אין מסך Login: אין ישות עם שדה סיסמה במודל התחום (ראו CLAUDE.md, "Entry Flow").
-            // מציגים ישירות את תפריט הבית.
-            showPanel(new MainMenuPanel());
+            // LoginPanel is a technical artifact only (PATTERNS.md: "Login is not a UC") --
+            // added to satisfy the oral-exam guide's explicit "login screen" requirement,
+            // not because the domain model gained a credential-holding entity. See
+            // LoginPanel.cs and CLAUDE.md's "Entry Flow" for the full reasoning.
+            showPanel(new LoginPanel());
         }
 
         /// <summary>

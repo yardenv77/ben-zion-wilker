@@ -1045,11 +1045,13 @@ CREATE PROCEDURE sp_purchase_order_create
     @vatAmount DECIMAL(10,2),
     @status NVARCHAR(30),
     @rejectionReason NVARCHAR(MAX),
-    @closureReason NVARCHAR(20)
+    @closureReason NVARCHAR(20),
+    @rejectedAt DATETIME2,
+    @archivedAt DATETIME2
 AS
 BEGIN
-    INSERT INTO PurchaseOrder (purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason)
-    VALUES (@purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason);
+    INSERT INTO PurchaseOrder (purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt)
+    VALUES (@purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason, @rejectedAt, @archivedAt);
 END
 GO
 
@@ -1091,7 +1093,7 @@ GO
 CREATE PROCEDURE sp_purchase_order_get_all
 AS
 BEGIN
-    SELECT purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason
+    SELECT purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt
     FROM PurchaseOrder;
 END
 GO
@@ -1100,7 +1102,7 @@ CREATE PROCEDURE sp_purchase_order_get_by_id
     @purchase_order_id INT
 AS
 BEGIN
-    SELECT purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason
+    SELECT purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt
     FROM PurchaseOrder
     WHERE purchase_order_id = @purchase_order_id;
 END
@@ -1538,14 +1540,16 @@ GO
 
 CREATE PROCEDURE sp_purchase_order_reject
     @purchase_order_id INT,
-    @rejectionReason NVARCHAR(MAX)
+    @rejectionReason NVARCHAR(MAX),
+    @rejectedAt DATETIME2
 AS
 BEGIN
     BEGIN TRY
         BEGIN TRAN;
         UPDATE PurchaseOrder
         SET status = N'Rejected',
-            rejectionReason = @rejectionReason
+            rejectionReason = @rejectionReason,
+            rejectedAt = @rejectedAt
         WHERE purchase_order_id = @purchase_order_id;
         COMMIT TRAN;
     END TRY
@@ -1556,13 +1560,19 @@ BEGIN
 END
 GO
 
+-- Clears rejectedAt along with the status flip back to Draft -- a PO revised
+-- out of Rejected is no longer subject to the BR-3 auto-cancel guard until it
+-- is rejected again (which will set a fresh rejectedAt).
 CREATE PROCEDURE sp_purchase_order_revise
     @purchase_order_id INT
 AS
 BEGIN
     BEGIN TRY
         BEGIN TRAN;
-        UPDATE PurchaseOrder SET status = N'Draft' WHERE purchase_order_id = @purchase_order_id;
+        UPDATE PurchaseOrder
+        SET status = N'Draft',
+            rejectedAt = NULL
+        WHERE purchase_order_id = @purchase_order_id;
         COMMIT TRAN;
     END TRY
     BEGIN CATCH
@@ -1719,12 +1729,16 @@ GO
 -- closureReason is NOT touched here -- it must survive from Received/Cancelled
 -- into Archived (docs/design/state-diagram.md).
 CREATE PROCEDURE sp_purchase_order_archive
-    @purchase_order_id INT
+    @purchase_order_id INT,
+    @archivedAt DATETIME2
 AS
 BEGIN
     BEGIN TRY
         BEGIN TRAN;
-        UPDATE PurchaseOrder SET status = N'Archived' WHERE purchase_order_id = @purchase_order_id;
+        UPDATE PurchaseOrder
+        SET status = N'Archived',
+            archivedAt = @archivedAt
+        WHERE purchase_order_id = @purchase_order_id;
         COMMIT TRAN;
     END TRY
     BEGIN CATCH

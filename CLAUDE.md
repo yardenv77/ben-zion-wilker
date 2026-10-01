@@ -285,26 +285,26 @@ Beyond the cross-project decisions in the Architecture Conventions section above
 
 ## Entry Flow
 
-The system has no `LoginPanel`. This was derived from the domain model, not assumed:
+**`LoginPanel` exists, but it is a technical artifact, not a domain feature.** The original reasoning below (no entry point derivable from the domain model) is still correct and still the reason there is no *real* authentication anywhere in this system — it's preserved here because it's the honest answer to give at the oral exam if asked why login isn't backed by a real credential entity. `LoginPanel` was added afterward, specifically to satisfy `cloned/docs/12-oral-exam-guide.html`'s explicit grading requirement for a login screen (~50% "עמידה בדרישות" component lists "מסך התחברות (login)" alongside the UCs and CRUD screens). Per PATTERNS.md ("Login is not a UC. Authentication is an NFR precondition. A LoginPanel is a technical artifact.") this still never appears in the UC diagram or in `00e-use-cases.md` — that rule is unaffected by whether a LoginPanel physically exists.
 
-- **No entity in `design/class-diagram.md` holds credential-like fields.** `Client` and `BusinessPartner` each have an `email` attribute, but neither they nor any of the other 23 classes have a password (or any other authentication) field. Since authentication isn't in the requirements (per "Login is not a UC" in Architecture Conventions above) and there is no credential-holding entity to check a login against, there is no login source to derive a `LoginPanel` from.
-- Per the flat-menu-vs-login decision rule for this project ("Login → per-role home panels, when multiple human actors with distinct screens" vs. "flat menu on `mainForm`, only when single actor or no credentials anywhere"), this project falls into the second case: **`mainForm` opens directly to a flat menu (`MainMenuPanel`), not per-role home panels.**
-- The 10 human actors (`00e-use-cases.md` §8.1: Project Manager, Tender Coordinator, Purchasing Manager, Site Supervisor, Accountant, Finance Officer, CEO, Quality Inspector, Equipment Manager, Safety Manager) are not distinguished by the UI at all — `MainMenuPanel` shows every implemented UC's entry point to any user, with no permission check. Permissions/roles noted in each UC's "Permissions" section (e.g. UC-01: Purchasing Manager has full CRUD, Accountant is read-only) are not enforced anywhere yet — there is nothing to check them against without authentication.
+- **No entity in `design/class-diagram.md` holds credential-like fields.** `Client` and `BusinessPartner` each have an `email` attribute, but neither they nor any of the other 23 classes have a password (or any other authentication) field. There is no credential-holding entity to check a login against.
+- **`LoginPanel` therefore does not check real credentials**, mirroring the course's own sample project (`cloned/example_project/LoginPanel.cs`, which looks up a `Worker` by ID and checks a hardcoded password, not a real stored one): it looks up an existing `Employee` by `employeeId` and checks a fixed, hardcoded demo password (`LoginPanel.cs`'s `DemoPassword` constant — not a field on any entity, not persisted anywhere). This is a deliberate, documented simplification, not an oversight — say so plainly if asked.
+- The 10 human actors (`00e-use-cases.md` §8.1: Project Manager, Tender Coordinator, Purchasing Manager, Site Supervisor, Accountant, Finance Officer, CEO, Quality Inspector, Equipment Manager, Safety Manager) are still not distinguished by the UI beyond this gate — after a successful login, every actor lands on the same flat `MainMenuPanel` (per the flat-menu-vs-login decision rule: "flat menu, only when single actor or no credentials anywhere" — the *domain* still has no real credentials, so per-role home panels still don't apply once past the technical login gate). Permissions/roles noted in each UC's "Permissions" section (e.g. UC-01: Purchasing Manager has full CRUD, Accountant is read-only) are still not enforced anywhere.
 
-**Navigation:** `mainForm` hosts a single `panelMain` container and exposes `static void showPanel(UserControl panel)`, exactly like the sample project. `mainForm`'s constructor calls `showPanel(new MainMenuPanel())` on startup instead of a `LoginPanel`.
+**Navigation:** `mainForm` hosts a single `panelMain` container and exposes `static void showPanel(UserControl panel)`, exactly like the sample project. `mainForm`'s constructor calls `showPanel(new LoginPanel())` on startup; a successful login calls `showPanel(new MainMenuPanel())`.
 
 **`MainMenuPanel` button → UC → panel map** (restricted to UC-01–UC-06, the only use cases with full specs in `00e-use-cases.md`; the ~26 other names traced in `00-requirements.md` §9 are traceability-only and not yet spec'd):
 
 | Button (Hebrew) | UC | Primary Actor | Panel |
 |---|---|---|---|
-| ניהול ספקים | UC-01 Manage Supplier | Purchasing Manager | TODO |
+| ניהול ספקים | UC-01 Manage Supplier | Purchasing Manager | `SupplierPanel` |
 | ניהול עובדים | UC-02 Manage Employee | Site Supervisor | `EmployeePanel` |
-| יצירת הזמנת רכש | UC-03 Create Purchase Order | Accountant | TODO |
-| יומן עבודה יומי | UC-04 Record Daily Work Log | Site Supervisor | TODO |
-| דוח רווחיות ותזרים מזומנים | UC-05 Generate Profitability & Cash Flow Report | CEO | TODO |
-| ניהול ערבויות וביטוחים | UC-06 Manage Guarantee & Insurance | Finance Officer | TODO |
+| יצירת הזמנת רכש | UC-03 Create Purchase Order | Accountant | `PurchaseOrderPanel` |
+| יומן עבודה יומי | UC-04 Record Daily Work Log | Site Supervisor | `DailyWorkLogPanel` |
+| דוח רווחיות ותזרים מזומנים | UC-05 Generate Profitability & Cash Flow Report | CEO | `ProjectProfitabilityReportPanel` |
+| ניהול ערבויות וביטוחים | UC-06 Manage Guarantee & Insurance | Finance Officer | `FinancialSecurityPanel` |
 
-A TODO button shows `MessageBox.Show("TODO")` until its panel is built; replace the placeholder handler with `mainForm.showPanel(new <Panel>())` at that point, the same way `button_manageEmployees_Click` was replaced when `EmployeePanel` was built.
+All six are implemented; none are TODO placeholders anymore. `MainMenuPanel` also exposes CRUD panels for every other domain entity (Client, TradeCategory, Equipment, Subcontractor, Tender, Project, BudgetLine, PaymentRequest, PurchaseOrderLine, SupplierPayment, SupplierPriceQuote, Attendance, EquipmentUsage, EquipmentAssignment) — see `MainMenuPanel.cs`'s own doc comment for the full button list.
 
 **`EmployeePanel`** (first CRUD panel, UC-02): list (`DataGridView`) + view/edit form + שמירה (create) / עדכון (update) / מחיקה (delete) / חזרה (back, returns to `MainMenuPanel`) in one panel, over `Employee`'s `createEmployee`/`updateEmployee`/`deleteEmployee`. Fields match `Employee`'s DB columns exactly (`employeeId`, `firstName`, `lastName`, `nationalId`, `role`, `dailyRate`, `certificationNo`, `status`); UC-02's "Skills" field is not implemented since it isn't a column on `Employee` in `create_database.sql`.
 

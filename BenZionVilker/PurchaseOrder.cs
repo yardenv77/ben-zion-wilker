@@ -19,10 +19,13 @@ namespace BenZionVilker
         private POStatus status;
         private string rejectionReason; // nullable: only set when status is/was Rejected
         private ClosureReason? closureReason; // nullable: only set on entry to Received/Cancelled
+        private DateTime? rejectedAt; // nullable: BR-3 guard support, set on entry to Rejected, cleared by revise()
+        private DateTime? archivedAt; // nullable: 7-year retention guard support, set on entry to Archived
 
         public PurchaseOrder(int purchaseOrderId, string poNumber, Supplier supplier, Project project,
             Employee createdBy, Employee approvedBy, Employee overrideApprovedBy, DateTime orderDate,
-            decimal totalAmount, decimal vatAmount, POStatus status, string rejectionReason, ClosureReason? closureReason, bool is_new)
+            decimal totalAmount, decimal vatAmount, POStatus status, string rejectionReason, ClosureReason? closureReason,
+            DateTime? rejectedAt, DateTime? archivedAt, bool is_new)
         {
             this.purchaseOrderId = purchaseOrderId;
             this.poNumber = poNumber;
@@ -37,6 +40,8 @@ namespace BenZionVilker
             this.status = status;
             this.rejectionReason = rejectionReason;
             this.closureReason = closureReason;
+            this.rejectedAt = rejectedAt;
+            this.archivedAt = archivedAt;
             if (is_new)
             {
                 this.createPurchaseOrder();
@@ -80,7 +85,7 @@ namespace BenZionVilker
         public void createPurchaseOrder()
         {
             SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_purchase_order_create @purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason";
+            cmd.CommandText = "EXECUTE sp_purchase_order_create @purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason, @rejectedAt, @archivedAt";
             cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
             cmd.Parameters.AddWithValue("@poNumber", this.poNumber);
             cmd.Parameters.AddWithValue("@supplier_id", this.supplier.getBusinessPartnerId());
@@ -94,6 +99,8 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             cmd.Parameters.AddWithValue("@rejectionReason", (object)this.rejectionReason ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@closureReason", (object)this.closureReason?.ToString() ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@rejectedAt", (object)this.rejectedAt ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@archivedAt", (object)this.archivedAt ?? DBNull.Value);
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
         }
@@ -151,9 +158,11 @@ namespace BenZionVilker
                 POStatus status = (POStatus)Enum.Parse(typeof(POStatus), rdr.GetValue(10).ToString());
                 string rejectionReason = rdr.GetValue(11) == DBNull.Value ? null : rdr.GetValue(11).ToString();
                 ClosureReason? closureReason = rdr.GetValue(12) == DBNull.Value ? (ClosureReason?)null : (ClosureReason)Enum.Parse(typeof(ClosureReason), rdr.GetValue(12).ToString());
+                DateTime? rejectedAt = rdr.GetValue(13) == DBNull.Value ? (DateTime?)null : DateTime.Parse(rdr.GetValue(13).ToString());
+                DateTime? archivedAt = rdr.GetValue(14) == DBNull.Value ? (DateTime?)null : DateTime.Parse(rdr.GetValue(14).ToString());
 
                 PurchaseOrder po = new PurchaseOrder(id, poNumber, supplier, project, createdBy, approvedBy, overrideApprovedBy,
-                    orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, false);
+                    orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt, false);
                 Program.PurchaseOrders.Add(po);
             }
         }
@@ -186,9 +195,9 @@ namespace BenZionVilker
         // message the panel shows via MessageBox (step 7.5).
         // ====================================================================
 
-        private bool everSubmitted = false;   // BR-1 guard: has this PO ever left Draft? (in-memory only, per session)
-        private DateTime? rejectedAt = null;  // BR-3 guard support (in-memory only -- lost on app restart)
-        private DateTime? archivedAt = null;  // 7-year retention guard support (in-memory only -- lost on app restart)
+        // BR-1 guard: has this PO ever left Draft? In-memory only, per session -- unlike
+        // rejectedAt/archivedAt above, this one is NOT persisted (flagged, not yet fixed).
+        private bool everSubmitted = false;
 
         public bool exceedsBudget()
         {
@@ -254,16 +263,18 @@ namespace BenZionVilker
             if (string.IsNullOrWhiteSpace(reason))
                 throw new InvalidOperationException("יש להזין סיבת דחייה");
 
+            DateTime now = DateTime.Now;
             SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_purchase_order_reject @purchase_order_id, @rejectionReason";
+            cmd.CommandText = "EXECUTE sp_purchase_order_reject @purchase_order_id, @rejectionReason, @rejectedAt";
             cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
             cmd.Parameters.AddWithValue("@rejectionReason", reason);
+            cmd.Parameters.AddWithValue("@rejectedAt", now);
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
             this.status = POStatus.Rejected;
             this.rejectionReason = reason;
-            this.rejectedAt = DateTime.Now;
+            this.rejectedAt = now;
         }
 
         // t5: Rejected -> Draft
@@ -431,14 +442,16 @@ namespace BenZionVilker
             if (this.status != POStatus.Received && this.status != POStatus.Cancelled)
                 throw new InvalidOperationException("ניתן להעביר לארכיון רק הזמנה שהתקבלה או בוטלה");
 
+            DateTime now = DateTime.Now;
             SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_purchase_order_archive @purchase_order_id";
+            cmd.CommandText = "EXECUTE sp_purchase_order_archive @purchase_order_id, @archivedAt";
             cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
+            cmd.Parameters.AddWithValue("@archivedAt", now);
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
             this.status = POStatus.Archived;
-            this.archivedAt = DateTime.Now;
+            this.archivedAt = now;
         }
 
         // t20: Archived -> deleted. 7-year retention guard.

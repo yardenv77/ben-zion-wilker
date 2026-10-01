@@ -303,6 +303,14 @@ namespace BenZionVilker
                 if (c is Label lbl)
                 {
                     if (lbl.Name == "label_title") { ApplyTitle(lbl); CenterHorizontally(lbl, containerWidth); }
+                    // label_subtitle (LoginPanel only) is freestanding caption text, not a
+                    // field label paired with a textbox -- ApplyFieldLabel would stretch its
+                    // box out to the panel edge (no sibling on its row to bound it against)
+                    // and right-align text inside that oversized box, which then renders at
+                    // the visual left edge under RTL mirroring instead of staying centered.
+                    // Leave it AutoSize with its Designer-authored font; the panel centers it
+                    // itself via CenterHorizontally after this call.
+                    else if (lbl.Name == "label_subtitle") { }
                     else ApplyFieldLabel(lbl, panel);
                 }
                 else if (c is TextBox tb)
