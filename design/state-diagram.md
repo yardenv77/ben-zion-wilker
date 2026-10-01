@@ -31,7 +31,8 @@ Lifecycle of a `PurchaseOrder` (UC-03 Create Purchase Order). 11 states — 9 si
 | t2a | Draft | PendingBudgetOverride | Order submitted | BR-2: over budget | reads `BudgetLine` (remaining budget) to evaluate the guard; entry → `notifyCEO()` |
 | t2b | Draft | PendingPMApproval | Order submitted | BR-2: within budget | reads `BudgetLine`; entry → `notifyProjectManager()` |
 | t3 | UnderApproval (border — applies from either PendingPMApproval or PendingBudgetOverride) | Draft | Order withdrawn by accountant | — | — |
-| t4 | UnderApproval (border — applies from either sub-state) | Rejected | Order rejected | — | `recordRejection(reason)` — stores `rejectionReason`; entry → `notifyAccountant()`. Covers both a PM rejection and a CEO rejection of the budget override with a single transition, since it fires from the composite's boundary. |
+| t4a | PendingPMApproval | Rejected | Order rejected by PM | — | `recordRejection(reason, rejectedBy=PM)` — stores `rejectionReason` and `rejectedBy`; entry → `notifyAccountant()` |
+| t4b | PendingBudgetOverride | Rejected | Order rejected by CEO | — | `recordRejection(reason, rejectedBy=CEO)` — stores `rejectionReason` and `rejectedBy`; entry → `notifyAccountant()` |
 | t5 | Rejected | Draft | Revision started | — | — |
 | t6 | Rejected | Cancelled | after(14 days from rejection) | BR-3 (automatic) | entry → `setClosureReason('CANCELLED')` |
 | t7 | Draft | ◎ final | Order cancelled | BR-1: never submitted | `delete()` — removes the `PurchaseOrder` and cascades to its `PurchaseOrderLine` children (composition) |
@@ -66,3 +67,11 @@ Per `class-diagram.md` §5's model-assumption note, this diagram revised `POStat
 - `PurchaseOrderLine.receivedQuantity : Real`
 
 These are reflected in `class-diagram.md`, `CLAUDE.md`, and `scripts/create_database.sql`.
+
+## 5. Revision: t4 split into t4a/t4b
+
+The original single `t4` border transition (`UnderApproval` → `Rejected`, firing from either sub-state) was a valid UML shorthand for "the same rejection behavior applies regardless of which sub-state you're in" — but it meant *which* sub-state a given rejection actually came from was lost: nothing downstream (data or diagram) distinguished a PM rejection from a CEO rejection, even though the accept-path already distinguishes the two symmetric roles (`approvedBy` for the PM, `overrideApprovedBy` for the CEO). Split into `t4a` (PM rejects, from `PendingPMApproval`) and `t4b` (CEO rejects, from `PendingBudgetOverride`), each now also setting a new attribute:
+
+- `PurchaseOrder.rejectedBy : Employee` — role `ProjectManager` on `t4a`, `CEO` on `t4b`; cleared by `t5` (Revision started), like `rejectionReason`.
+
+Reflected in `CLAUDE.md`, `scripts/create_database.sql`, and `scripts/migrate_po_rejectedby.sql` (existing database).

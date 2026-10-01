@@ -227,7 +227,7 @@ namespace BenZionVilker
             // (sp_purchase_order_create_flow), never Draft, matching what that procedure
             // itself writes to the everSubmitted column.
             PurchaseOrder po = new PurchaseOrder(purchaseOrderId, poNumber, supplier, project, this, null, null,
-                orderDate, resultTotal, resultVat, resultStatus, null, null, null, null, true, false);
+                orderDate, resultTotal, resultVat, resultStatus, null, null, null, null, true, null, false);
             Program.PurchaseOrders.Add(po);
 
             for (int i = 0; i < lines.Count; i++)

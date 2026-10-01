@@ -23,11 +23,12 @@ namespace BenZionVilker
         private DateTime? rejectedAt; // nullable: BR-3 guard support, set on entry to Rejected, cleared by revise()
         private DateTime? archivedAt; // nullable: 7-year retention guard support, set on entry to Archived
         private bool everSubmitted; // BR-1 guard: has this order ever left Draft? See submit()/cancel()
+        private Employee rejectedBy; // nullable: only set on entry to Rejected -- whichever role actually rejected (PM from PendingPMApproval, CEO from PendingBudgetOverride), cleared on revise() back to Draft
 
         public PurchaseOrder(int purchaseOrderId, string poNumber, Supplier supplier, Project project,
             Employee createdBy, Employee approvedBy, Employee overrideApprovedBy, DateTime orderDate,
             decimal totalAmount, decimal vatAmount, POStatus status, string rejectionReason, ClosureReason? closureReason,
-            DateTime? rejectedAt, DateTime? archivedAt, bool everSubmitted, bool is_new)
+            DateTime? rejectedAt, DateTime? archivedAt, bool everSubmitted, Employee rejectedBy, bool is_new)
         {
             this.purchaseOrderId = purchaseOrderId;
             this.poNumber = poNumber;
@@ -45,6 +46,7 @@ namespace BenZionVilker
             this.rejectedAt = rejectedAt;
             this.archivedAt = archivedAt;
             this.everSubmitted = everSubmitted;
+            this.rejectedBy = rejectedBy;
             if (is_new)
             {
                 this.createPurchaseOrder();
@@ -65,6 +67,7 @@ namespace BenZionVilker
         public POStatus getStatus() { return this.status; }
         public string getRejectionReason() { return this.rejectionReason; }
         public ClosureReason? getClosureReason() { return this.closureReason; }
+        public Employee getRejectedBy() { return this.rejectedBy; }
 
         public void setPoNumber(string poNumber) { this.poNumber = poNumber; }
         public void setSupplier(Supplier supplier) { this.supplier = supplier; }
@@ -88,7 +91,7 @@ namespace BenZionVilker
         public void createPurchaseOrder()
         {
             SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_purchase_order_create @purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason, @rejectedAt, @archivedAt, @everSubmitted";
+            cmd.CommandText = "EXECUTE sp_purchase_order_create @purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason, @rejectedAt, @archivedAt, @everSubmitted, @rejected_by_employee_id";
             cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
             cmd.Parameters.AddWithValue("@poNumber", this.poNumber);
             cmd.Parameters.AddWithValue("@supplier_id", this.supplier.getBusinessPartnerId());
@@ -105,6 +108,7 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@rejectedAt", (object)this.rejectedAt ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@archivedAt", (object)this.archivedAt ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@everSubmitted", this.everSubmitted);
+            cmd.Parameters.AddWithValue("@rejected_by_employee_id", (object)this.rejectedBy?.getEmployeeId() ?? DBNull.Value);
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
         }
@@ -165,9 +169,10 @@ namespace BenZionVilker
                 DateTime? rejectedAt = rdr.GetValue(13) == DBNull.Value ? (DateTime?)null : DateTime.Parse(rdr.GetValue(13).ToString());
                 DateTime? archivedAt = rdr.GetValue(14) == DBNull.Value ? (DateTime?)null : DateTime.Parse(rdr.GetValue(14).ToString());
                 bool everSubmitted = Convert.ToBoolean(rdr.GetValue(15));
+                Employee rejectedBy = rdr.GetValue(16) == DBNull.Value ? null : Employee.seekEmployee(int.Parse(rdr.GetValue(16).ToString()));
 
                 PurchaseOrder po = new PurchaseOrder(id, poNumber, supplier, project, createdBy, approvedBy, overrideApprovedBy,
-                    orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt, everSubmitted, false);
+                    orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt, everSubmitted, rejectedBy, false);
                 Program.PurchaseOrders.Add(po);
             }
         }
@@ -255,27 +260,34 @@ namespace BenZionVilker
             this.status = POStatus.Draft;
         }
 
-        // t4: UnderApproval (either sub-state) -> Rejected -- covers both a PM
-        // rejection and a CEO rejection of the budget override (border transition)
-        public void reject(string reason)
+        // t4a/t4b: PendingPMApproval -> Rejected (PM rejects) or PendingBudgetOverride ->
+        // Rejected (CEO rejects the budget override) -- two distinct transitions sharing a
+        // target, per design/state-diagram.html. rejectedBy records which role actually did
+        // it: the caller resolves the right Employee from whichever approval field is
+        // relevant to the order's current sub-state (PurchaseOrderPanel.button_reject_Click).
+        public void reject(string reason, Employee rejectedBy)
         {
             if (this.status != POStatus.PendingPMApproval && this.status != POStatus.PendingBudgetOverride)
                 throw new InvalidOperationException("ניתן לדחות רק הזמנה שממתינה לאישור");
             if (string.IsNullOrWhiteSpace(reason))
                 throw new InvalidOperationException("יש להזין סיבת דחייה");
+            if (rejectedBy == null)
+                throw new InvalidOperationException("יש לבחור מי דוחה את ההזמנה");
 
             DateTime now = DateTime.Now;
             SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_purchase_order_reject @purchase_order_id, @rejectionReason, @rejectedAt";
+            cmd.CommandText = "EXECUTE sp_purchase_order_reject @purchase_order_id, @rejectionReason, @rejectedAt, @rejected_by_employee_id";
             cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
             cmd.Parameters.AddWithValue("@rejectionReason", reason);
             cmd.Parameters.AddWithValue("@rejectedAt", now);
+            cmd.Parameters.AddWithValue("@rejected_by_employee_id", rejectedBy.getEmployeeId());
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
             this.status = POStatus.Rejected;
             this.rejectionReason = reason;
             this.rejectedAt = now;
+            this.rejectedBy = rejectedBy;
         }
 
         // t5: Rejected -> Draft
@@ -292,6 +304,7 @@ namespace BenZionVilker
 
             this.status = POStatus.Draft;
             this.rejectedAt = null;
+            this.rejectedBy = null;
         }
 
         // t6: Rejected -> Cancelled (BR-3). System-triggered -- no UI button (step 7.5).

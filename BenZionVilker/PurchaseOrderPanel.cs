@@ -323,7 +323,7 @@ namespace BenZionVilker
             new PurchaseOrder(id, textBox_poNumber.Text, resolveSelectedSupplier(), resolveSelectedProject(),
                 resolveSelectedCreatedBy(), null, null,
                 DateTime.Parse(textBox_orderDate.Text), decimal.Parse(textBox_totalAmount.Text), decimal.Parse(textBox_vatAmount.Text),
-                POStatus.Draft, null, null, null, null, false, true);
+                POStatus.Draft, null, null, null, null, false, null, true);
 
             MessageBox.Show("הזמנת הרכש נשמרה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -410,7 +410,14 @@ namespace BenZionVilker
             if (!requireSelection()) return;
             try
             {
-                selectedPurchaseOrder.reject(textBox_rejectionReason.Text);
+                // Who's rejecting depends on which sub-state the order is currently in: the
+                // CEO rejects from PendingBudgetOverride (comboBox_overrideApprovedBy), the PM
+                // rejects from PendingPMApproval (comboBox_approvedBy) -- same two fields the
+                // approve-path buttons already read from, just read here before the rejection
+                // instead of after an approval.
+                ComboBox rejecterBox = selectedPurchaseOrder.getStatus() == POStatus.PendingBudgetOverride
+                    ? comboBox_overrideApprovedBy : comboBox_approvedBy;
+                selectedPurchaseOrder.reject(textBox_rejectionReason.Text, resolveSelectedEmployeeOrNull(rejecterBox));
                 MessageBox.Show("ההזמנה נדחתה", "הודעה", MessageBoxButtons.OK);
                 clearForm();
                 loadPurchaseOrders();

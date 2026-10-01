@@ -259,6 +259,7 @@ CREATE TABLE PurchaseOrder (
     rejectedAt DATETIME2 NULL, -- nullable: set on entry to Rejected, cleared on revise() back to Draft -- persists the BR-3 14-day auto-cancel guard across app restarts
     archivedAt DATETIME2 NULL, -- nullable: set on entry to Archived -- persists the 7-year purge() retention guard across app restarts
     everSubmitted BIT NOT NULL, -- BR-1 guard: has this order ever left Draft? False only for an order created via button_save (always Draft); true from creation for one created via the quick-create flow (sp_purchase_order_create_flow, which inserts straight into a Pending* status, never Draft) or the moment submit() runs -- persists the guard cancel() uses to decide delete-vs-Cancel across app restarts
+    rejected_by_employee_id INT NULL, -- nullable: role "rejectedBy", set on entry to Rejected, cleared on revise() back to Draft -- whichever role actually rejected (ProjectManager from PendingPMApproval, CEO from PendingBudgetOverride); two distinct transitions into Rejected per design/state-diagram.html, previously indistinguishable from this column alone
     CONSTRAINT CK_PurchaseOrder_Status CHECK (status IN (N'Draft', N'UnderApproval', N'PendingPMApproval', N'PendingBudgetOverride', N'Rejected', N'InFulfillment', N'Sent', N'PartiallyReceived', N'Received', N'Cancelled', N'Archived')),
     CONSTRAINT CK_PurchaseOrder_ClosureReason CHECK (closureReason IS NULL OR closureReason IN (N'Received', N'Cancelled')),
     CONSTRAINT FK_PurchaseOrder_Supplier FOREIGN KEY (supplier_id)
@@ -270,6 +271,8 @@ CREATE TABLE PurchaseOrder (
     CONSTRAINT FK_PurchaseOrder_ApprovedBy FOREIGN KEY (approved_by_employee_id)
         REFERENCES Employee(employee_id) ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT FK_PurchaseOrder_OverrideApprovedBy FOREIGN KEY (override_approved_by_employee_id)
+        REFERENCES Employee(employee_id) ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT FK_PurchaseOrder_RejectedBy FOREIGN KEY (rejected_by_employee_id)
         REFERENCES Employee(employee_id) ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 GO
