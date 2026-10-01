@@ -32,6 +32,25 @@ namespace BenZionVilker
         public DateTime getExpiryDate() { return this.expiryDate; }
         public SecurityStatus getStatus() { return this.status; }
 
+        // UC-06 (docs/00e-use-cases.md) + Part 1 problem #3: the 30-day pre-expiry alert the
+        // business doesn't have today. getRemainingDays()/isExpiringSoon() match the methods
+        // already named on FinancialSecurity in design/class-diagram.md -- declared here, on
+        // the shared base, since both BankGuarantee and InsurancePolicy need identical logic.
+        public int getRemainingDays() { return (int)(this.expiryDate.Date - DateTime.Now.Date).TotalDays; }
+
+        // Deliberately checks the DATE, not `status == Active` -- nothing in this system
+        // auto-flips status to Expired as time passes (no scheduled job), so a stale "Active"
+        // record whose real-world expiryDate has already passed is exactly the silent-lapse
+        // scenario this alert exists to catch (Part 1 problem #3). Released is the one status
+        // trusted here, because it's always a deliberate Finance Officer action (closing the
+        // security out), not something that silently goes stale like Expired does.
+        public bool isExpiringSoon()
+        {
+            if (this.status == SecurityStatus.Released) return false;
+            int remaining = getRemainingDays();
+            return remaining >= 0 && remaining <= 30;
+        }
+
         public void setProject(Project project) { this.project = project; }
         public void setAmount(decimal amount) { this.amount = amount; }
         public void setIssueDate(DateTime issueDate) { this.issueDate = issueDate; }

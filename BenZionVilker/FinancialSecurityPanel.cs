@@ -46,6 +46,7 @@ namespace BenZionVilker
             dt.Columns.Add("issueDate", typeof(DateTime));
             dt.Columns.Add("expiryDate", typeof(DateTime));
             dt.Columns.Add("status", typeof(string));
+            dt.Columns.Add("alertStatus", typeof(string));
             dt.Columns.Add("details", typeof(string));
 
             foreach (FinancialSecurity fs in Program.FinancialSecurities)
@@ -63,7 +64,28 @@ namespace BenZionVilker
                 }
                 else continue;
 
-                dt.Rows.Add(fs.getFinancialSecurityId(), type, fs.getAmount(), fs.getIssueDate(), fs.getExpiryDate(), fs.getStatus().ToString(), details);
+                // UC-06 30-day alert (docs/00e-use-cases.md, Part 1 problem #3): a dedicated
+                // column, not a reuse of "status" -- a security can be SecurityStatus.Active
+                // and still be days from expiring, which the status column alone can't show.
+                // Driven by the real expiryDate, not by `status`: nothing in this system flips
+                // status to Expired automatically as time passes, so a stale "Active" record
+                // whose date has already passed must still be caught here (the exact silent-
+                // lapse scenario this alert exists to prevent). Released is the one status
+                // trusted, since it's always a deliberate Finance Officer action -- but it
+                // gets its own label, not "בתוקף": a released security isn't "valid right now"
+                // just because it was properly closed out before its date, even if that date
+                // has since passed (e.g. a returned bank guarantee with a 2025 expiry date).
+                string alertStatus;
+                if (fs.getStatus() == SecurityStatus.Released)
+                    alertStatus = "שוחרר";
+                else if (fs.getRemainingDays() < 0)
+                    alertStatus = "פג תוקף";
+                else if (fs.isExpiringSoon())
+                    alertStatus = "מתקרב לתפוגה";
+                else
+                    alertStatus = "בתוקף";
+
+                dt.Rows.Add(fs.getFinancialSecurityId(), type, fs.getAmount(), fs.getIssueDate(), fs.getExpiryDate(), fs.getStatus().ToString(), alertStatus, details);
             }
 
             dataGridView_securities.DataSource = dt;
@@ -77,7 +99,10 @@ namespace BenZionVilker
             dataGridView_securities.Columns["issueDate"].HeaderText = "תאריך הנפקה";
             dataGridView_securities.Columns["expiryDate"].HeaderText = "תאריך תפוגה";
             dataGridView_securities.Columns["status"].HeaderText = "סטטוס";
+            dataGridView_securities.Columns["alertStatus"].HeaderText = "התראה";
             dataGridView_securities.Columns["details"].HeaderText = "פרטים";
+
+            Theme.ApplyStatusBadgeColumn(dataGridView_securities, "alertStatus");
         }
 
         private void dataGridView_securities_CellClick(object sender, DataGridViewCellEventArgs e)

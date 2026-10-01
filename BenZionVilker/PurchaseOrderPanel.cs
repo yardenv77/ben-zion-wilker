@@ -67,6 +67,31 @@ namespace BenZionVilker
 
             loadPurchaseOrders();
             refreshPendingLinesGrid();
+            refreshActionButtons();
+        }
+
+        // Course step 10.2 ("professional, not cluttered, easy for users less comfortable
+        // with new technology") -- a PO's status allows only 1-3 of these 9 verb buttons at
+        // any given moment (docs/design/state-diagram.md), so showing all 9 as equally
+        // clickable forces the user to learn which ones actually work by trial and error.
+        // Disabled rather than hidden: the full set of possible actions stays visible (so
+        // nothing seems to vanish) and the layout never has to reflow -- only the buttons
+        // valid for the selected order's current status stay enabled and colored.
+        private void refreshActionButtons()
+        {
+            POStatus? status = selectedPurchaseOrder?.getStatus();
+
+            button_updateDetails.Enabled = status == POStatus.Draft || status == POStatus.Rejected;
+            button_delete.Enabled = status == POStatus.Draft;
+            button_submit.Enabled = status == POStatus.Draft;
+            button_cancel.Enabled = status == POStatus.Draft;
+            button_withdraw.Enabled = status == POStatus.PendingPMApproval || status == POStatus.PendingBudgetOverride;
+            button_reject.Enabled = status == POStatus.PendingPMApproval || status == POStatus.PendingBudgetOverride;
+            button_approveBudgetOverride.Enabled = status == POStatus.PendingBudgetOverride;
+            button_approve.Enabled = status == POStatus.PendingPMApproval;
+            button_revise.Enabled = status == POStatus.Rejected;
+            button_cancelRemaining.Enabled = status == POStatus.Sent || status == POStatus.PartiallyReceived;
+            button_archive.Enabled = status == POStatus.Received || status == POStatus.Cancelled;
         }
 
         // Course step 10 ("polish") -- palette/typography from Theme.cs, applied once here
@@ -189,6 +214,8 @@ namespace BenZionVilker
             comboBox_status.Text = EnumDisplay.Hebrew(selectedPurchaseOrder.getStatus());
             textBox_rejectionReason.Text = selectedPurchaseOrder.getRejectionReason();
             comboBox_closureReason.Text = selectedPurchaseOrder.getClosureReason().HasValue ? selectedPurchaseOrder.getClosureReason().Value.ToString() : NoneOption;
+
+            refreshActionButtons();
         }
 
         private bool validateFields()
@@ -281,6 +308,8 @@ namespace BenZionVilker
             comboBox_status.SelectedIndex = 0;
             textBox_rejectionReason.Text = "";
             comboBox_closureReason.SelectedIndex = 0;
+
+            refreshActionButtons();
         }
 
         private void button_save_Click(object sender, EventArgs e)
@@ -446,7 +475,17 @@ namespace BenZionVilker
             try
             {
                 selectedPurchaseOrder.approve(resolveSelectedEmployeeOrNull(comboBox_approvedBy));
-                MessageBox.Show("ההזמנה אושרה ונשלחה לספק", "הודעה", MessageBoxButtons.OK);
+                // UC-03.Include: "Send Purchase Order Email to Supplier" -- simulated (no real
+                // SMTP), but shows the actual composed notification so the include-UC is
+                // genuinely demonstrable, not just a status flip.
+                // Explicit RTL options: MessageBox.Show doesn't infer reading direction from
+                // the text's content, only from parameters given here -- the plain overload
+                // used by every other MessageBox.Show in this app renders Hebrew LTR-aligned.
+                // That's only visible on a short one-liner if you look closely, but this is a
+                // multi-line composed message where it's clearly wrong, so it's fixed here.
+                MessageBox.Show(selectedPurchaseOrder.composeSupplierEmail(), "📧 מייל נשלח לספק",
+                    MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1,
+                    MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign);
                 clearForm();
                 loadPurchaseOrders();
             }

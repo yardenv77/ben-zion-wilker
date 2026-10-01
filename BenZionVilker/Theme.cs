@@ -468,12 +468,12 @@ namespace BenZionVilker
         {
             switch (status)
             {
-                case "Received": case "Approved": case "Active": case "Paid": case "Completed":
+                case "Received": case "Approved": case "Active": case "Paid": case "Completed": case "בתוקף":
                     return SuccessBg;
                 case "PendingPMApproval": case "PendingBudgetOverride": case "UnderApproval":
-                case "UnderReview": case "Submitted": case "OnHold": case "Overdue":
+                case "UnderReview": case "Submitted": case "OnHold": case "Overdue": case "מתקרב לתפוגה":
                     return WarningBg;
-                case "Rejected": case "Cancelled": case "Expired": case "Inactive": case "Suspended": case "Terminated":
+                case "Rejected": case "Cancelled": case "Expired": case "Inactive": case "Suspended": case "Terminated": case "פג תוקף":
                     return DangerBg;
                 default:
                     return InfoBg; // Draft, Sent, InFulfillment, InProgress, PartiallyReceived, Archived, ...
@@ -484,12 +484,12 @@ namespace BenZionVilker
         {
             switch (status)
             {
-                case "Received": case "Approved": case "Active": case "Paid": case "Completed":
+                case "Received": case "Approved": case "Active": case "Paid": case "Completed": case "בתוקף":
                     return SuccessText;
                 case "PendingPMApproval": case "PendingBudgetOverride": case "UnderApproval":
-                case "UnderReview": case "Submitted": case "OnHold": case "Overdue":
+                case "UnderReview": case "Submitted": case "OnHold": case "Overdue": case "מתקרב לתפוגה":
                     return WarningText;
-                case "Rejected": case "Cancelled": case "Expired": case "Inactive": case "Suspended": case "Terminated":
+                case "Rejected": case "Cancelled": case "Expired": case "Inactive": case "Suspended": case "Terminated": case "פג תוקף":
                     return DangerText;
                 default:
                     return InfoText;

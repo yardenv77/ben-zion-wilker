@@ -32,6 +32,7 @@ namespace BenZionVilker
             this.label_kpiProfitValue = new System.Windows.Forms.Label();
             this.label_kpiProfitCaption = new System.Windows.Forms.Label();
             this.dataGridView_report = new System.Windows.Forms.DataGridView();
+            this.panel_chart = new System.Windows.Forms.Panel();
             this.button_back = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_report)).BeginInit();
             this.SuspendLayout();
@@ -214,14 +215,31 @@ namespace BenZionVilker
             this.dataGridView_report.Size = new System.Drawing.Size(900, 330);
             this.dataGridView_report.TabIndex = 11;
             //
+            // panel_chart -- UC-05 "interactive dashboard with tables and charts"
+            // (docs/00e-use-cases.md, Part 2). Hand-drawn column chart (see
+            // panel_chart_Paint in the .cs file) comparing revenue vs. actual cost per
+            // project, one cluster per row from sp_report_project_profitability -- the
+            // same "identify unprofitable projects early" comparison the grid's numbers
+            // already carry, just visual. Drawn with plain GDI+ rather than a charting
+            // library: the one available NuGet port for .NET 8
+            // (System.Windows.Forms.DataVisualization) throws a FileNotFoundException for
+            // System.Data.SqlClient at runtime -- leftover .NET Framework-era
+            // DbProviderFactories probing code that doesn't resolve on .NET 8 -- so a
+            // hand-drawn chart is the more reliable choice here, not a stopgap.
+            //
+            this.panel_chart.Location = new System.Drawing.Point(50, 710);
+            this.panel_chart.Name = "panel_chart";
+            this.panel_chart.Size = new System.Drawing.Size(900, 280);
+            this.panel_chart.TabIndex = 12;
+            //
             // button_back
             //
             this.button_back.Cursor = System.Windows.Forms.Cursors.Hand;
             this.button_back.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
-            this.button_back.Location = new System.Drawing.Point(445, 710);
+            this.button_back.Location = new System.Drawing.Point(445, 1020);
             this.button_back.Name = "button_back";
             this.button_back.Size = new System.Drawing.Size(110, 42);
-            this.button_back.TabIndex = 12;
+            this.button_back.TabIndex = 13;
             this.button_back.Text = "חזרה";
             this.button_back.UseVisualStyleBackColor = true;
             this.button_back.Click += new System.EventHandler(this.button_back_Click);
@@ -231,6 +249,7 @@ namespace BenZionVilker
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.button_back);
+            this.Controls.Add(this.panel_chart);
             this.Controls.Add(this.dataGridView_report);
             this.Controls.Add(this.panel_kpiProfit);
             this.Controls.Add(this.panel_kpiCost);
@@ -245,7 +264,7 @@ namespace BenZionVilker
             this.Controls.Add(this.label_title);
             this.Name = "ProjectProfitabilityReportPanel";
             this.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
-            this.Size = new System.Drawing.Size(1000, 780);
+            this.Size = new System.Drawing.Size(1000, 1090);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_report)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -271,6 +290,7 @@ namespace BenZionVilker
         private System.Windows.Forms.Label label_kpiProfitValue;
         private System.Windows.Forms.Label label_kpiProfitCaption;
         private System.Windows.Forms.DataGridView dataGridView_report;
+        private System.Windows.Forms.Panel panel_chart;
         private System.Windows.Forms.Button button_back;
     }
 }

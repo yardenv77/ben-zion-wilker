@@ -155,23 +155,32 @@ INSERT INTO Project (project_id, tender_id, project_manager_employee_id, name, a
 (5, 5, 9, N'מזח נמל – הרחבת שטח מזרחי', N'נמל אשדוד', '2025-11-01', '2027-06-30', NULL, NULL, N'Cancelled');
 GO
 
--- FinancialSecurity (6) -- covers all SecurityStatus values; project_id resolves the
--- previously-flagged gap (securities are managed per project, UC-06); rows 1-3 become
+-- FinancialSecurity (7) -- covers all SecurityStatus values; project_id resolves the
+-- previously-flagged gap (securities are managed per project, UC-06); rows 1-3,7 become
 -- BankGuarantees, 4-6 InsurancePolicies.
+-- Row 4's expiryDate is deliberately in the past while status is still Active -- the
+-- stale-status scenario the UC-06 30-day alert (FinancialSecurity.isExpiringSoon(),
+-- FinancialSecurityPanel's alert column) exists to catch, since nothing in this system
+-- auto-flips status to Expired as time passes. Row 7's expiryDate is deliberately ~2
+-- weeks out while still Active, so the alert's "מתקרב לתפוגה" (expiring soon) case has
+-- a demonstrable example too -- row 1 through row 6 jump straight from already-expired
+-- to a year+ away, with nothing landing in the 30-day window.
 INSERT INTO FinancialSecurity (financial_security_id, project_id, amount, issueDate, expiryDate, status) VALUES
 (1, 1, 250000.00, '2025-06-01', '2026-12-31', N'Active'),
 (2, 2, 180000.00, '2023-01-15', '2025-01-15', N'Expired'),
 (3, 3, 90000.00, '2024-03-01', '2025-03-01', N'Released'),
 (4, 1, 500000.00, '2025-09-01', '2026-09-01', N'Active'),
 (5, 4, 320000.00, '2023-05-01', '2024-05-01', N'Expired'),
-(6, 5, 150000.00, '2024-01-01', '2025-01-01', N'Released');
+(6, 5, 150000.00, '2024-01-01', '2025-01-01', N'Released'),
+(7, 2, 275000.00, '2025-10-01', '2026-10-15', N'Active');
 GO
 
--- BankGuarantee (3)
+-- BankGuarantee (4)
 INSERT INTO BankGuarantee (financial_security_id, bankName, guaranteeNumber) VALUES
 (1, N'בנק הפועלים', N'GUA-2025-0112'),
 (2, N'בנק לאומי', N'GUA-2023-0087'),
-(3, N'בנק דיסקונט', N'GUA-2024-0033');
+(3, N'בנק דיסקונט', N'GUA-2024-0033'),
+(7, N'בנק מזרחי טפחות', N'GUA-2026-0155');
 GO
 
 -- InsurancePolicy (3)

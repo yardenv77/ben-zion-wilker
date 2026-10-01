@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
@@ -15,6 +16,8 @@ namespace BenZionVilker
     /// </summary>
     public partial class ProjectProfitabilityReportPanel : UserControl
     {
+        private List<(string label, double revenue, double cost)> chartData = new List<(string label, double revenue, double cost)>();
+
         public ProjectProfitabilityReportPanel()
         {
             InitializeComponent();
@@ -28,6 +31,10 @@ namespace BenZionVilker
             Theme.ApplyKpiCard(panel_kpiCost, label_kpiCostValue, label_kpiCostCaption, Theme.WarningBg, Theme.WarningText);
             Theme.ApplyKpiCard(panel_kpiProfit, label_kpiProfitValue, label_kpiProfitCaption, Theme.InfoBg, Theme.InfoText);
             Theme.WrapInCard(dataGridView_report);
+
+            panel_chart.BackColor = Theme.Surface;
+            panel_chart.Paint += panel_chart_Paint;
+            Theme.WrapInCard(panel_chart);
 
             comboBox_project.Items.Add("-- כל הפרויקטים --");
             foreach (Project p in Program.Projects)
@@ -90,12 +97,15 @@ namespace BenZionVilker
                     dataGridView_report.Columns[moneyColumn].DefaultCellStyle.Format = "N2";
             }
 
+            chartData.Clear();
+
             if (dt.Rows.Count == 0)
             {
                 label_kpiRevenueValue.Text = "--";
                 label_kpiCostValue.Text = "--";
                 label_kpiProfitValue.Text = "--";
                 Theme.ApplyKpiCard(panel_kpiProfit, label_kpiProfitValue, label_kpiProfitCaption, Theme.InfoBg, Theme.InfoText);
+                panel_chart.Invalidate();
                 MessageBox.Show("אין נתונים פיננסיים לטווח ולפרויקט שנבחרו", "הודעה", MessageBoxButtons.OK);
                 return;
             }
@@ -106,7 +116,10 @@ namespace BenZionVilker
                 totalRevenue += Convert.ToDecimal(row["הכנסה"]);
                 totalCost += Convert.ToDecimal(row["עלות_בפועל"]);
                 totalProfit += Convert.ToDecimal(row["רווח_נטו"]);
+
+                chartData.Add((row["שם_פרויקט"].ToString(), Convert.ToDouble(row["הכנסה"]), Convert.ToDouble(row["עלות_בפועל"])));
             }
+            panel_chart.Invalidate();
 
             label_kpiRevenueValue.Text = totalRevenue.ToString("N0") + " ₪";
             label_kpiCostValue.Text = totalCost.ToString("N0") + " ₪";
@@ -117,6 +130,77 @@ namespace BenZionVilker
             Color profitBg = totalProfit >= 0 ? Theme.SuccessBg : Theme.DangerBg;
             Color profitText = totalProfit >= 0 ? Theme.SuccessText : Theme.DangerText;
             Theme.ApplyKpiCard(panel_kpiProfit, label_kpiProfitValue, label_kpiProfitCaption, profitBg, profitText);
+        }
+
+        // Hand-drawn grouped column chart -- revenue vs. actual cost per project. See the
+        // Designer.cs comment on panel_chart for why this isn't a charting-library control.
+        private void panel_chart_Paint(object sender, PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            Rectangle bounds = panel_chart.ClientRectangle;
+
+            if (chartData.Count == 0)
+            {
+                TextRenderer.DrawText(g, "אין נתונים להצגה -- הפיקו דוח", Theme.BodyFont, bounds, Theme.TextSecondary,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                return;
+            }
+
+            // Legend -- labels are right-aligned within a fixed-width rectangle ending just
+            // before the swatch, so "עלות בפועל" (longer than "הכנסה") can't run into its box.
+            int swatchX = bounds.Width - 150;
+            Rectangle revenueLabelRect = new Rectangle(bounds.Width - 270, 10, 110, 18);
+            Rectangle costLabelRect = new Rectangle(bounds.Width - 270, 32, 110, 18);
+            using (SolidBrush revenueBrush = new SolidBrush(Theme.BrandPrimary))
+            using (SolidBrush costBrush = new SolidBrush(Theme.WarningText))
+            {
+                TextRenderer.DrawText(g, "הכנסה", Theme.CaptionFont, revenueLabelRect, Theme.TextPrimary,
+                    TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
+                g.FillRectangle(revenueBrush, swatchX, 12, 14, 14);
+                TextRenderer.DrawText(g, "עלות בפועל", Theme.CaptionFont, costLabelRect, Theme.TextPrimary,
+                    TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
+                g.FillRectangle(costBrush, swatchX, 34, 14, 14);
+            }
+
+            const int topMargin = 50, bottomMargin = 80, sideMargin = 20;
+            int plotHeight = bounds.Height - topMargin - bottomMargin;
+            int plotWidth = bounds.Width - sideMargin * 2;
+            int baselineY = topMargin + plotHeight;
+
+            double maxValue = 1;
+            foreach (var row in chartData)
+                maxValue = Math.Max(maxValue, Math.Max(row.revenue, row.cost));
+
+            using (Pen borderPen = new Pen(Theme.Border))
+                g.DrawLine(borderPen, sideMargin, baselineY, bounds.Width - sideMargin, baselineY);
+
+            int groupWidth = plotWidth / chartData.Count;
+            int barWidth = Math.Min(40, groupWidth / 3);
+            const int gap = 6;
+
+            using (SolidBrush revenueBrush = new SolidBrush(Theme.BrandPrimary))
+            using (SolidBrush costBrush = new SolidBrush(Theme.WarningText))
+            {
+                for (int i = 0; i < chartData.Count; i++)
+                {
+                    var row = chartData[i];
+                    int groupCenterX = sideMargin + groupWidth * i + groupWidth / 2;
+
+                    int revenueHeight = (int)(row.revenue / maxValue * plotHeight);
+                    int costHeight = (int)(row.cost / maxValue * plotHeight);
+
+                    int revenueX = groupCenterX - barWidth - gap / 2;
+                    int costX = groupCenterX + gap / 2;
+
+                    if (revenueHeight > 0) g.FillRectangle(revenueBrush, revenueX, baselineY - revenueHeight, barWidth, revenueHeight);
+                    if (costHeight > 0) g.FillRectangle(costBrush, costX, baselineY - costHeight, barWidth, costHeight);
+
+                    Rectangle labelRect = new Rectangle(groupCenterX - groupWidth / 2, baselineY + 6, groupWidth, bottomMargin - 10);
+                    TextRenderer.DrawText(g, row.label, Theme.CaptionFont, labelRect, Theme.TextSecondary,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak);
+                }
+            }
         }
 
         private int resolveSelectedProjectId()

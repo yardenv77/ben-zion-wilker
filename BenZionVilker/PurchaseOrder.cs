@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Microsoft.Data.SqlClient;
 
 namespace BenZionVilker
@@ -380,6 +381,42 @@ namespace BenZionVilker
 
             this.approvedBy = projectManager;
             this.status = POStatus.Sent;
+        }
+
+        // UC-03.Include: "Send Purchase Order Email to Supplier" (docs/00e-use-cases.md MSS
+        // step 12, triggered right after approve()). Simulated rather than sent over real
+        // SMTP -- the course's oral-exam guide lists a real external email send as optional
+        // bonus content, not a baseline requirement -- but assembles the genuine notification
+        // content (supplier contact, every line, computed totals) so the include-UC is
+        // actually demonstrable rather than a no-op. Pure string-building, no UI: the caller
+        // (PurchaseOrderPanel) decides how to show it, per this project's "entity classes
+        // don't do UI" convention.
+        public string composeSupplierEmail()
+        {
+            StringBuilder body = new StringBuilder();
+            body.AppendLine("אל: " + this.supplier.getName() + " <" + this.supplier.getEmail() + ">");
+            body.AppendLine("נושא: הזמנת רכש מס' " + this.poNumber + " אושרה");
+            body.AppendLine();
+            body.AppendLine("שלום,");
+            body.AppendLine("הזמנת הרכש שלהלן אושרה במסגרת פרויקט \"" + this.project.getName() + "\" ונשלחת אליכם לביצוע:");
+            body.AppendLine();
+
+            foreach (PurchaseOrderLine line in Program.PurchaseOrderLines)
+            {
+                if (line.getPurchaseOrder() != this) continue;
+                body.AppendLine("- " + line.getDescription() + " | כמות: " + line.getQuantity() + " " + line.getUnitOfMeasure()
+                    + " | מחיר יחידה: " + line.getUnitPrice().ToString("N2") + " ש\"ח");
+            }
+
+            body.AppendLine();
+            body.AppendLine("סכום לפני מע\"מ: " + (this.totalAmount - this.vatAmount).ToString("N2") + " ש\"ח");
+            body.AppendLine("מע\"מ: " + this.vatAmount.ToString("N2") + " ש\"ח");
+            body.AppendLine("סה\"כ לתשלום: " + this.totalAmount.ToString("N2") + " ש\"ח");
+            body.AppendLine();
+            body.AppendLine("בברכה,");
+            body.AppendLine(this.createdBy.getFullName());
+
+            return body.ToString();
         }
 
         // t14/t15/t16: Sent/PartiallyReceived -> PartiallyReceived or Received (BR-5)
