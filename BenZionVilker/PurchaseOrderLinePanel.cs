@@ -133,8 +133,10 @@ namespace BenZionVilker
             int id = PurchaseOrderLine.getNextPurchaseOrderLineId();
             // A new line always starts at 0 received (BR-5) -- receivedQuantity changes
             // only through PurchaseOrder.receiveDelivery(), never at line creation.
-            new PurchaseOrderLine(id, resolveSelectedPurchaseOrder(), textBox_description.Text, textBox_unitOfMeasure.Text,
+            PurchaseOrderLine line = new PurchaseOrderLine(id, resolveSelectedPurchaseOrder(), textBox_description.Text, textBox_unitOfMeasure.Text,
                 double.Parse(textBox_quantity.Text), decimal.Parse(textBox_unitPrice.Text), 0, true);
+
+            if (!Program.PurchaseOrderLines.Contains(line)) return;
 
             MessageBox.Show("שורת הפריט נשמרה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -155,7 +157,7 @@ namespace BenZionVilker
             selectedLine.setUnitOfMeasure(textBox_unitOfMeasure.Text);
             selectedLine.setQuantity(double.Parse(textBox_quantity.Text));
             selectedLine.setUnitPrice(decimal.Parse(textBox_unitPrice.Text));
-            selectedLine.updatePurchaseOrderLine();
+            if (!selectedLine.updatePurchaseOrderLine()) return;
 
             MessageBox.Show("שורת הפריט עודכנה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -173,7 +175,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את שורת הפריט?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedLine.deletePurchaseOrderLine();
+            if (!selectedLine.deletePurchaseOrderLine()) return;
             clearForm();
             loadLines();
         }

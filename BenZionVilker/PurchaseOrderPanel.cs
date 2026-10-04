@@ -320,10 +320,12 @@ namespace BenZionVilker
             // A new order always starts life in Draft (t0 in the state diagram), never
             // approved/rejected/closed by fiat -- status/rejectionReason/closureReason
             // change only through the transition methods, per step 7.4.
-            new PurchaseOrder(id, textBox_poNumber.Text, resolveSelectedSupplier(), resolveSelectedProject(),
+            PurchaseOrder po = new PurchaseOrder(id, textBox_poNumber.Text, resolveSelectedSupplier(), resolveSelectedProject(),
                 resolveSelectedCreatedBy(), null, null,
                 DateTime.Parse(textBox_orderDate.Text), decimal.Parse(textBox_totalAmount.Text), decimal.Parse(textBox_vatAmount.Text),
                 POStatus.Draft, null, null, null, null, false, null, true);
+
+            if (!Program.PurchaseOrders.Contains(po)) return;
 
             MessageBox.Show("הזמנת הרכש נשמרה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -349,7 +351,7 @@ namespace BenZionVilker
             selectedPurchaseOrder.setOrderDate(DateTime.Parse(textBox_orderDate.Text));
             selectedPurchaseOrder.setTotalAmount(decimal.Parse(textBox_totalAmount.Text));
             selectedPurchaseOrder.setVatAmount(decimal.Parse(textBox_vatAmount.Text));
-            selectedPurchaseOrder.updatePurchaseOrder();
+            if (!selectedPurchaseOrder.updatePurchaseOrder()) return;
 
             MessageBox.Show("פרטי ההזמנה עודכנו בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -547,7 +549,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את הזמנת הרכש?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedPurchaseOrder.deletePurchaseOrder();
+            if (!selectedPurchaseOrder.deletePurchaseOrder()) return;
             clearForm();
             loadPurchaseOrders();
         }

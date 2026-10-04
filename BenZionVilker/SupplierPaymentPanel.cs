@@ -133,8 +133,10 @@ namespace BenZionVilker
             SupplierPaymentStatus status = (SupplierPaymentStatus)Enum.Parse(typeof(SupplierPaymentStatus), comboBox_status.Text);
             DateTime? paidDate = string.IsNullOrWhiteSpace(textBox_paidDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_paidDate.Text);
 
-            new SupplierPayment(id, textBox_invoiceNumber.Text, resolveSelectedBusinessPartner(), decimal.Parse(textBox_amount.Text),
+            SupplierPayment supplierPayment = new SupplierPayment(id, textBox_invoiceNumber.Text, resolveSelectedBusinessPartner(), decimal.Parse(textBox_amount.Text),
                 DateTime.Parse(textBox_dueDate.Text), paidDate, status, true);
+
+            if (!Program.SupplierPayments.Contains(supplierPayment)) return;
 
             MessageBox.Show("התשלום נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -156,7 +158,7 @@ namespace BenZionVilker
             selectedSupplierPayment.setDueDate(DateTime.Parse(textBox_dueDate.Text));
             selectedSupplierPayment.setPaidDate(string.IsNullOrWhiteSpace(textBox_paidDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_paidDate.Text));
             selectedSupplierPayment.setStatus((SupplierPaymentStatus)Enum.Parse(typeof(SupplierPaymentStatus), comboBox_status.Text));
-            selectedSupplierPayment.updateSupplierPayment();
+            if (!selectedSupplierPayment.updateSupplierPayment()) return;
 
             MessageBox.Show("התשלום עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -174,7 +176,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את התשלום?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedSupplierPayment.deleteSupplierPayment();
+            if (!selectedSupplierPayment.deleteSupplierPayment()) return;
             clearForm();
             loadSupplierPayments();
         }

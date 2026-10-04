@@ -123,7 +123,9 @@ namespace BenZionVilker
             int id = EquipmentAssignment.getNextEquipmentAssignmentId();
             DateTime? endDate = string.IsNullOrWhiteSpace(textBox_endDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_endDate.Text);
 
-            new EquipmentAssignment(id, resolveSelectedProject(), resolveSelectedEquipment(), DateTime.Parse(textBox_startDate.Text), endDate, true);
+            EquipmentAssignment assignment = new EquipmentAssignment(id, resolveSelectedProject(), resolveSelectedEquipment(), DateTime.Parse(textBox_startDate.Text), endDate, true);
+
+            if (!Program.EquipmentAssignments.Contains(assignment)) return;
 
             MessageBox.Show("השיבוץ נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -143,7 +145,7 @@ namespace BenZionVilker
             selectedAssignment.setEquipment(resolveSelectedEquipment());
             selectedAssignment.setStartDate(DateTime.Parse(textBox_startDate.Text));
             selectedAssignment.setEndDate(string.IsNullOrWhiteSpace(textBox_endDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_endDate.Text));
-            selectedAssignment.updateEquipmentAssignment();
+            if (!selectedAssignment.updateEquipmentAssignment()) return;
 
             MessageBox.Show("השיבוץ עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -161,7 +163,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את השיבוץ?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedAssignment.deleteEquipmentAssignment();
+            if (!selectedAssignment.deleteEquipmentAssignment()) return;
             clearForm();
             loadAssignments();
         }

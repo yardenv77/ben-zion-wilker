@@ -18,8 +18,8 @@ namespace BenZionVilker
             this.coverageType = coverageType;
             if (is_new)
             {
-                this.createInsurancePolicy();
-                Program.FinancialSecurities.Add(this);
+                if (this.createInsurancePolicy())
+                    Program.FinancialSecurities.Add(this);
             }
         }
 
@@ -31,46 +31,50 @@ namespace BenZionVilker
         public void setPolicyNumber(string policyNumber) { this.policyNumber = policyNumber; }
         public void setCoverageType(string coverageType) { this.coverageType = coverageType; }
 
-        public void createInsurancePolicy()
+        public bool createInsurancePolicy()
         {
-            this.createFinancialSecurity();
+            SqlCommand parentCmd = this.createFinancialSecurity();
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_insurance_policy_create @financial_security_id, @insurerName, @policyNumber, @coverageType";
-            cmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
-            cmd.Parameters.AddWithValue("@insurerName", this.insurerName);
-            cmd.Parameters.AddWithValue("@policyNumber", this.policyNumber);
-            cmd.Parameters.AddWithValue("@coverageType", this.coverageType);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_insurance_policy_create @financial_security_id, @insurerName, @policyNumber, @coverageType";
+            childCmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
+            childCmd.Parameters.AddWithValue("@insurerName", this.insurerName);
+            childCmd.Parameters.AddWithValue("@policyNumber", this.policyNumber);
+            childCmd.Parameters.AddWithValue("@coverageType", this.coverageType);
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query_transactional(parentCmd, childCmd);
         }
 
-        public void updateInsurancePolicy()
+        public bool updateInsurancePolicy()
         {
-            this.updateFinancialSecurity();
+            SqlCommand parentCmd = this.updateFinancialSecurity();
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_insurance_policy_update @financial_security_id, @insurerName, @policyNumber, @coverageType";
-            cmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
-            cmd.Parameters.AddWithValue("@insurerName", this.insurerName);
-            cmd.Parameters.AddWithValue("@policyNumber", this.policyNumber);
-            cmd.Parameters.AddWithValue("@coverageType", this.coverageType);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_insurance_policy_update @financial_security_id, @insurerName, @policyNumber, @coverageType";
+            childCmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
+            childCmd.Parameters.AddWithValue("@insurerName", this.insurerName);
+            childCmd.Parameters.AddWithValue("@policyNumber", this.policyNumber);
+            childCmd.Parameters.AddWithValue("@coverageType", this.coverageType);
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query_transactional(parentCmd, childCmd);
         }
 
-        // Child row must be deleted before the parent row (FK has no cascade).
-        public void deleteInsurancePolicy()
+        // Child row deleted before the parent row (FK has no cascade), both in one transaction.
+        public bool deleteInsurancePolicy()
         {
-            Program.FinancialSecurities.Remove(this);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_insurance_policy_delete @financial_security_id";
+            childCmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_insurance_policy_delete @financial_security_id";
-            cmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
+            SqlCommand parentCmd = this.deleteFinancialSecurity();
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
-
-            this.deleteFinancialSecurity();
+            bool success = SC.execute_non_query_transactional(childCmd, parentCmd);
+            if (success)
+                Program.FinancialSecurities.Remove(this);
+            return success;
         }
     }
 }

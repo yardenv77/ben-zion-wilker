@@ -112,6 +112,11 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין תאריך פרסום תקין (yyyy-MM-dd)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
+            if (DateTime.Parse(textBox_publishedDate.Text) > DateTime.Parse(textBox_submissionDeadline.Text))
+            {
+                MessageBox.Show("תאריך פרסום המכרז לא יכול להיות אחרי מועד הגשה", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
             return true;
         }
 
@@ -141,8 +146,10 @@ namespace BenZionVilker
 
             int id = Tender.getNextTenderId();
             TenderStatus status = (TenderStatus)Enum.Parse(typeof(TenderStatus), comboBox_status.Text);
-            new Tender(id, textBox_tenderNumber.Text, resolveSelectedClient(), textBox_title.Text, decimal.Parse(textBox_estimatedValue.Text),
+            Tender t = new Tender(id, textBox_tenderNumber.Text, resolveSelectedClient(), textBox_title.Text, decimal.Parse(textBox_estimatedValue.Text),
                 DateTime.Parse(textBox_submissionDeadline.Text), DateTime.Parse(textBox_publishedDate.Text), status, true);
+
+            if (!Program.Tenders.Contains(t)) return;
 
             MessageBox.Show("המכרז נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -165,7 +172,7 @@ namespace BenZionVilker
             selectedTender.setSubmissionDeadline(DateTime.Parse(textBox_submissionDeadline.Text));
             selectedTender.setPublishedDate(DateTime.Parse(textBox_publishedDate.Text));
             selectedTender.setStatus((TenderStatus)Enum.Parse(typeof(TenderStatus), comboBox_status.Text));
-            selectedTender.updateTender();
+            if (!selectedTender.updateTender()) return;
 
             MessageBox.Show("המכרז עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -183,7 +190,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את המכרז?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedTender.deleteTender();
+            if (!selectedTender.deleteTender()) return;
             clearForm();
             loadTenders();
         }

@@ -110,7 +110,9 @@ namespace BenZionVilker
             if (!validateFields()) return;
 
             int id = EquipmentUsage.getNextEquipmentUsageId();
-            new EquipmentUsage(id, resolveSelectedEquipment(), resolveSelectedDailyWorkLog(), double.Parse(textBox_hoursOperated.Text), true);
+            EquipmentUsage usage = new EquipmentUsage(id, resolveSelectedEquipment(), resolveSelectedDailyWorkLog(), double.Parse(textBox_hoursOperated.Text), true);
+
+            if (!Program.EquipmentUsages.Contains(usage)) return;
 
             MessageBox.Show("השימוש בציוד נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -129,7 +131,7 @@ namespace BenZionVilker
             selectedUsage.setEquipment(resolveSelectedEquipment());
             selectedUsage.setDailyWorkLog(resolveSelectedDailyWorkLog());
             selectedUsage.setHoursOperated(double.Parse(textBox_hoursOperated.Text));
-            selectedUsage.updateEquipmentUsage();
+            if (!selectedUsage.updateEquipmentUsage()) return;
 
             MessageBox.Show("השימוש בציוד עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -147,7 +149,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את רשומת השימוש בציוד?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedUsage.deleteEquipmentUsage();
+            if (!selectedUsage.deleteEquipmentUsage()) return;
             clearForm();
             loadUsages();
         }

@@ -26,8 +26,8 @@ namespace BenZionVilker
             this.receivedQuantity = receivedQuantity;
             if (is_new)
             {
-                this.createPurchaseOrderLine();
-                Program.PurchaseOrderLines.Add(this);
+                if (this.createPurchaseOrderLine())
+                    Program.PurchaseOrderLines.Add(this);
             }
         }
 
@@ -47,7 +47,7 @@ namespace BenZionVilker
         public void setUnitPrice(decimal unitPrice) { this.unitPrice = unitPrice; }
         public void setReceivedQuantity(double receivedQuantity) { this.receivedQuantity = receivedQuantity; }
 
-        public void createPurchaseOrderLine()
+        public bool createPurchaseOrderLine()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_purchase_order_line_create @purchase_order_line_id, @purchase_order_id, @description, @unitOfMeasure, @quantity, @unitPrice, @receivedQuantity";
@@ -59,12 +59,12 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@unitPrice", this.unitPrice);
             cmd.Parameters.AddWithValue("@receivedQuantity", this.receivedQuantity);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
         // Deliberately does NOT touch receivedQuantity (step 7.4): it's state-machine-owned
         // by PurchaseOrder.receiveDelivery() (BR-5), never by this generic CRUD update.
-        public void updatePurchaseOrderLine()
+        public bool updatePurchaseOrderLine()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_purchase_order_line_update @purchase_order_line_id, @purchase_order_id, @description, @unitOfMeasure, @quantity, @unitPrice";
@@ -75,17 +75,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@quantity", this.quantity);
             cmd.Parameters.AddWithValue("@unitPrice", this.unitPrice);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deletePurchaseOrderLine()
+        public bool deletePurchaseOrderLine()
         {
-            Program.PurchaseOrderLines.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_purchase_order_line_delete @purchase_order_line_id";
             cmd.Parameters.AddWithValue("@purchase_order_line_id", this.purchaseOrderLineId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.PurchaseOrderLines.Remove(this);
+            return success;
         }
 
         public static void initPurchaseOrderLines()

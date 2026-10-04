@@ -169,6 +169,11 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין תאריך תפוגה תקין (yyyy-MM-dd)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
+            if (DateTime.Parse(textBox_issueDate.Text) > DateTime.Parse(textBox_expiryDate.Text))
+            {
+                MessageBox.Show("תאריך התפוגה לא יכול להיות לפני תאריך ההנפקה", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
             if (comboBox_type.Text == TypeGuarantee)
             {
                 if (string.IsNullOrWhiteSpace(textBox_bankName.Text) || string.IsNullOrWhiteSpace(textBox_guaranteeNumber.Text))
@@ -217,10 +222,13 @@ namespace BenZionVilker
             SecurityStatus status = (SecurityStatus)Enum.Parse(typeof(SecurityStatus), comboBox_status.Text);
 
             Project project = resolveSelectedProject();
+            FinancialSecurity fs;
             if (comboBox_type.Text == TypeGuarantee)
-                new BankGuarantee(id, project, amount, issueDate, expiryDate, status, textBox_bankName.Text, textBox_guaranteeNumber.Text, true);
+                fs = new BankGuarantee(id, project, amount, issueDate, expiryDate, status, textBox_bankName.Text, textBox_guaranteeNumber.Text, true);
             else
-                new InsurancePolicy(id, project, amount, issueDate, expiryDate, status, textBox_insurerName.Text, textBox_policyNumber.Text, textBox_coverageType.Text, true);
+                fs = new InsurancePolicy(id, project, amount, issueDate, expiryDate, status, textBox_insurerName.Text, textBox_policyNumber.Text, textBox_coverageType.Text, true);
+
+            if (!Program.FinancialSecurities.Contains(fs)) return;
 
             MessageBox.Show("הערבות/הביטוח נשמרו בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -242,19 +250,25 @@ namespace BenZionVilker
             selectedSecurity.setExpiryDate(DateTime.Parse(textBox_expiryDate.Text));
             selectedSecurity.setStatus((SecurityStatus)Enum.Parse(typeof(SecurityStatus), comboBox_status.Text));
 
+            bool success;
             if (selectedSecurity is BankGuarantee bg)
             {
                 bg.setBankName(textBox_bankName.Text);
                 bg.setGuaranteeNumber(textBox_guaranteeNumber.Text);
-                bg.updateBankGuarantee();
+                success = bg.updateBankGuarantee();
             }
             else if (selectedSecurity is InsurancePolicy ip)
             {
                 ip.setInsurerName(textBox_insurerName.Text);
                 ip.setPolicyNumber(textBox_policyNumber.Text);
                 ip.setCoverageType(textBox_coverageType.Text);
-                ip.updateInsurancePolicy();
+                success = ip.updateInsurancePolicy();
             }
+            else
+            {
+                success = false;
+            }
+            if (!success) return;
 
             MessageBox.Show("הרשומה עודכנה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -272,10 +286,12 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את הרשומה?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
+            bool success = false;
             if (selectedSecurity is BankGuarantee bg)
-                bg.deleteBankGuarantee();
+                success = bg.deleteBankGuarantee();
             else if (selectedSecurity is InsurancePolicy ip)
-                ip.deleteInsurancePolicy();
+                success = ip.deleteInsurancePolicy();
+            if (!success) return;
 
             clearForm();
             loadSecurities();

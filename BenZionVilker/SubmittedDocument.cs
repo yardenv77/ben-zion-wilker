@@ -19,8 +19,8 @@ namespace BenZionVilker
             this.receivedOn = receivedOn;
             if (is_new)
             {
-                this.createSubmittedDocument();
-                Program.SubmittedDocuments.Add(this);
+                if (this.createSubmittedDocument())
+                    Program.SubmittedDocuments.Add(this);
             }
         }
 
@@ -33,7 +33,7 @@ namespace BenZionVilker
         public void setType(DocumentType type) { this.type = type; }
         public void setReceivedOn(DateTime receivedOn) { this.receivedOn = receivedOn; }
 
-        public void createSubmittedDocument()
+        public bool createSubmittedDocument()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_submitted_document_create @submitted_document_id, @payment_request_id, @type, @receivedOn";
@@ -42,10 +42,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@type", this.type.ToString());
             cmd.Parameters.AddWithValue("@receivedOn", this.receivedOn);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateSubmittedDocument()
+        public bool updateSubmittedDocument()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_submitted_document_update @submitted_document_id, @payment_request_id, @type, @receivedOn";
@@ -54,17 +54,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@type", this.type.ToString());
             cmd.Parameters.AddWithValue("@receivedOn", this.receivedOn);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteSubmittedDocument()
+        public bool deleteSubmittedDocument()
         {
-            Program.SubmittedDocuments.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_submitted_document_delete @submitted_document_id";
             cmd.Parameters.AddWithValue("@submitted_document_id", this.submittedDocumentId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.SubmittedDocuments.Remove(this);
+            return success;
         }
 
         public static void initSubmittedDocuments()

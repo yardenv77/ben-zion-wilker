@@ -23,8 +23,8 @@ namespace BenZionVilker
             this.endDate = endDate;
             if (is_new)
             {
-                this.createEquipmentAssignment();
-                Program.EquipmentAssignments.Add(this);
+                if (this.createEquipmentAssignment())
+                    Program.EquipmentAssignments.Add(this);
             }
         }
 
@@ -39,7 +39,7 @@ namespace BenZionVilker
         public void setStartDate(DateTime startDate) { this.startDate = startDate; }
         public void setEndDate(DateTime? endDate) { this.endDate = endDate; }
 
-        public void createEquipmentAssignment()
+        public bool createEquipmentAssignment()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_equipment_assignment_create @equipment_assignment_id, @project_id, @equipment_id, @startDate, @endDate";
@@ -49,10 +49,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@startDate", this.startDate);
             cmd.Parameters.AddWithValue("@endDate", (object)this.endDate ?? DBNull.Value);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateEquipmentAssignment()
+        public bool updateEquipmentAssignment()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_equipment_assignment_update @equipment_assignment_id, @project_id, @equipment_id, @startDate, @endDate";
@@ -62,17 +62,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@startDate", this.startDate);
             cmd.Parameters.AddWithValue("@endDate", (object)this.endDate ?? DBNull.Value);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteEquipmentAssignment()
+        public bool deleteEquipmentAssignment()
         {
-            Program.EquipmentAssignments.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_equipment_assignment_delete @equipment_assignment_id";
             cmd.Parameters.AddWithValue("@equipment_assignment_id", this.equipmentAssignmentId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.EquipmentAssignments.Remove(this);
+            return success;
         }
 
         public static void initEquipmentAssignments()

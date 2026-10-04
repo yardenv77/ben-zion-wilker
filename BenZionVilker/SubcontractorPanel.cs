@@ -148,9 +148,11 @@ namespace BenZionVilker
 
             int id = BusinessPartner.getNextBusinessPartnerId();
             PartnerStatus status = (PartnerStatus)Enum.Parse(typeof(PartnerStatus), comboBox_status.Text);
-            new Subcontractor(id, textBox_name.Text, textBox_companyRegistrationNo.Text, textBox_contactPerson.Text,
+            Subcontractor sub = new Subcontractor(id, textBox_name.Text, textBox_companyRegistrationNo.Text, textBox_contactPerson.Text,
                 textBox_phone.Text, textBox_email.Text, double.Parse(textBox_rating.Text), status,
                 textBox_tradeSpecialty.Text, decimal.Parse(textBox_dailyRate.Text), true);
+
+            if (!Program.BusinessPartners.Contains(sub)) return;
 
             MessageBox.Show("קבלן המשנה נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -175,7 +177,7 @@ namespace BenZionVilker
             selectedSubcontractor.setStatus((PartnerStatus)Enum.Parse(typeof(PartnerStatus), comboBox_status.Text));
             selectedSubcontractor.setTradeSpecialty(textBox_tradeSpecialty.Text);
             selectedSubcontractor.setDailyRate(decimal.Parse(textBox_dailyRate.Text));
-            selectedSubcontractor.updateSubcontractor();
+            if (!selectedSubcontractor.updateSubcontractor()) return;
 
             MessageBox.Show("קבלן המשנה עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -193,7 +195,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את קבלן המשנה?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedSubcontractor.deleteSubcontractor();
+            if (!selectedSubcontractor.deleteSubcontractor()) return;
             clearForm();
             loadSubcontractors();
         }

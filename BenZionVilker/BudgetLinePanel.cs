@@ -109,8 +109,10 @@ namespace BenZionVilker
             if (!validateFields()) return;
 
             int id = BudgetLine.getNextBudgetLineId();
-            new BudgetLine(id, resolveSelectedProject(), textBox_category.Text,
+            BudgetLine budgetLine = new BudgetLine(id, resolveSelectedProject(), textBox_category.Text,
                 decimal.Parse(textBox_plannedAmount.Text), decimal.Parse(textBox_actualAmount.Text), true);
+
+            if (!Program.BudgetLines.Contains(budgetLine)) return;
 
             MessageBox.Show("שורת התקציב נשמרה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -130,7 +132,7 @@ namespace BenZionVilker
             selectedBudgetLine.setCategory(textBox_category.Text);
             selectedBudgetLine.setPlannedAmount(decimal.Parse(textBox_plannedAmount.Text));
             selectedBudgetLine.setActualAmount(decimal.Parse(textBox_actualAmount.Text));
-            selectedBudgetLine.updateBudgetLine();
+            if (!selectedBudgetLine.updateBudgetLine()) return;
 
             MessageBox.Show("שורת התקציב עודכנה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -148,7 +150,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את שורת התקציב?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedBudgetLine.deleteBudgetLine();
+            if (!selectedBudgetLine.deleteBudgetLine()) return;
             clearForm();
             loadBudgetLines();
         }

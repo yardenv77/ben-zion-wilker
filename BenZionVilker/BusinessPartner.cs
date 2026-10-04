@@ -47,9 +47,10 @@ namespace BenZionVilker
         public void setRating(double rating) { this.rating = rating; }
         public void setStatus(PartnerStatus status) { this.status = status; }
 
-        // Writes only the BusinessPartner (parent-table) row. Supplier/Subcontractor
-        // call this plus their own subclass-table SP when overriding create/update/delete.
-        protected void createBusinessPartner()
+        // Builds (without executing) the BusinessPartner (parent-table) command. Supplier/
+        // Subcontractor combine this with their own subclass-table command and run both
+        // in one transaction via SQL_CON.execute_non_query_transactional -- see Supplier.cs.
+        protected SqlCommand createBusinessPartner()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_business_partner_create @business_partner_id, @name, @companyRegistrationNo, @contactPerson, @phone, @email, @rating, @status";
@@ -61,11 +62,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@email", this.email);
             cmd.Parameters.AddWithValue("@rating", this.rating);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
-            SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return cmd;
         }
 
-        protected void updateBusinessPartner()
+        protected SqlCommand updateBusinessPartner()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_business_partner_update @business_partner_id, @name, @companyRegistrationNo, @contactPerson, @phone, @email, @rating, @status";
@@ -77,17 +77,15 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@email", this.email);
             cmd.Parameters.AddWithValue("@rating", this.rating);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
-            SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return cmd;
         }
 
-        protected void deleteBusinessPartner()
+        protected SqlCommand deleteBusinessPartner()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_business_partner_delete @business_partner_id";
             cmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
-            SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return cmd;
         }
 
         // Loads BusinessPartner + Supplier + Subcontractor via three basic CRUD calls

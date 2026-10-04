@@ -16,8 +16,8 @@ namespace BenZionVilker
             this.dailyRate = dailyRate;
             if (is_new)
             {
-                this.createSubcontractor();
-                Program.BusinessPartners.Add(this);
+                if (this.createSubcontractor())
+                    Program.BusinessPartners.Add(this);
             }
         }
 
@@ -27,45 +27,50 @@ namespace BenZionVilker
         public void setTradeSpecialty(string tradeSpecialty) { this.tradeSpecialty = tradeSpecialty; }
         public void setDailyRate(decimal dailyRate) { this.dailyRate = dailyRate; }
 
-        // Writes both the BusinessPartner (parent) row and the Subcontractor (child) row.
-        public void createSubcontractor()
+        // Writes both the BusinessPartner (parent) row and the Subcontractor (child) row,
+        // in one transaction -- either both are written, or neither is (no orphaned parent row).
+        public bool createSubcontractor()
         {
-            this.createBusinessPartner();
+            SqlCommand parentCmd = this.createBusinessPartner();
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_subcontractor_create @business_partner_id, @tradeSpecialty, @dailyRate";
-            cmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
-            cmd.Parameters.AddWithValue("@tradeSpecialty", this.tradeSpecialty);
-            cmd.Parameters.AddWithValue("@dailyRate", this.dailyRate);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_subcontractor_create @business_partner_id, @tradeSpecialty, @dailyRate";
+            childCmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
+            childCmd.Parameters.AddWithValue("@tradeSpecialty", this.tradeSpecialty);
+            childCmd.Parameters.AddWithValue("@dailyRate", this.dailyRate);
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query_transactional(parentCmd, childCmd);
         }
 
-        public void updateSubcontractor()
+        public bool updateSubcontractor()
         {
-            this.updateBusinessPartner();
+            SqlCommand parentCmd = this.updateBusinessPartner();
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_subcontractor_update @business_partner_id, @tradeSpecialty, @dailyRate";
-            cmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
-            cmd.Parameters.AddWithValue("@tradeSpecialty", this.tradeSpecialty);
-            cmd.Parameters.AddWithValue("@dailyRate", this.dailyRate);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_subcontractor_update @business_partner_id, @tradeSpecialty, @dailyRate";
+            childCmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
+            childCmd.Parameters.AddWithValue("@tradeSpecialty", this.tradeSpecialty);
+            childCmd.Parameters.AddWithValue("@dailyRate", this.dailyRate);
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query_transactional(parentCmd, childCmd);
         }
 
-        // Child row must be deleted before the parent row (FK has no cascade).
-        public void deleteSubcontractor()
+        // Child row deleted before the parent row (FK has no cascade), both in one transaction.
+        public bool deleteSubcontractor()
         {
-            Program.BusinessPartners.Remove(this);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_subcontractor_delete @business_partner_id";
+            childCmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_subcontractor_delete @business_partner_id";
-            cmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
+            SqlCommand parentCmd = this.deleteBusinessPartner();
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
-
-            this.deleteBusinessPartner();
+            bool success = SC.execute_non_query_transactional(childCmd, parentCmd);
+            if (success)
+                Program.BusinessPartners.Remove(this);
+            return success;
         }
     }
 }

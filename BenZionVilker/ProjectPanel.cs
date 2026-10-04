@@ -129,6 +129,17 @@ namespace BenZionVilker
                 MessageBox.Show("תאריך סיום בפועל אינו תקין (yyyy-MM-dd)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
+            if (DateTime.Parse(textBox_plannedStartDate.Text) > DateTime.Parse(textBox_plannedEndDate.Text))
+            {
+                MessageBox.Show("תאריך סיום מתוכנן לא יכול להיות לפני תאריך התחלה מתוכנן", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            if (!string.IsNullOrWhiteSpace(textBox_actualStartDate.Text) && !string.IsNullOrWhiteSpace(textBox_actualEndDate.Text)
+                && DateTime.Parse(textBox_actualStartDate.Text) > DateTime.Parse(textBox_actualEndDate.Text))
+            {
+                MessageBox.Show("תאריך סיום בפועל לא יכול להיות לפני תאריך התחלה בפועל", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
             return true;
         }
 
@@ -170,9 +181,11 @@ namespace BenZionVilker
             DateTime? actualStart = string.IsNullOrWhiteSpace(textBox_actualStartDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_actualStartDate.Text);
             DateTime? actualEnd = string.IsNullOrWhiteSpace(textBox_actualEndDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_actualEndDate.Text);
 
-            new Project(id, resolveSelectedTender(), resolveSelectedProjectManager(), textBox_name.Text, textBox_address.Text,
+            Project project = new Project(id, resolveSelectedTender(), resolveSelectedProjectManager(), textBox_name.Text, textBox_address.Text,
                 DateTime.Parse(textBox_plannedStartDate.Text), DateTime.Parse(textBox_plannedEndDate.Text),
                 actualStart, actualEnd, status, true);
+
+            if (!Program.Projects.Contains(project)) return;
 
             MessageBox.Show("הפרויקט נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -197,7 +210,7 @@ namespace BenZionVilker
             selectedProject.setActualStartDate(string.IsNullOrWhiteSpace(textBox_actualStartDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_actualStartDate.Text));
             selectedProject.setActualEndDate(string.IsNullOrWhiteSpace(textBox_actualEndDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_actualEndDate.Text));
             selectedProject.setStatus((ProjectStatus)Enum.Parse(typeof(ProjectStatus), comboBox_status.Text));
-            selectedProject.updateProject();
+            if (!selectedProject.updateProject()) return;
 
             MessageBox.Show("הפרויקט עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -215,7 +228,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את הפרויקט?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedProject.deleteProject();
+            if (!selectedProject.deleteProject()) return;
             clearForm();
             loadProjects();
         }

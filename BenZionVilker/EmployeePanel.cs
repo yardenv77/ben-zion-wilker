@@ -107,6 +107,19 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין מספר הסמכה", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
+            if (!System.Text.RegularExpressions.Regex.IsMatch(textBox_nationalId.Text, @"^\d{9}$"))
+            {
+                MessageBox.Show("תעודת זהות חייבת להיות בת 9 ספרות", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            foreach (Employee emp in Program.Employees)
+            {
+                if (emp != selectedEmployee && emp.getNationalId() == textBox_nationalId.Text)
+                {
+                    MessageBox.Show("קיים כבר עובד עם תעודת זהות זו", "שגיאה", MessageBoxButtons.OK);
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -136,6 +149,8 @@ namespace BenZionVilker
             Employee emp = new Employee(id, textBox_firstName.Text, textBox_lastName.Text, textBox_nationalId.Text,
                 role, dailyRate, textBox_certificationNo.Text, status, true);
 
+            if (!Program.Employees.Contains(emp)) return;
+
             MessageBox.Show("העובד נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
             loadEmployees();
@@ -157,7 +172,7 @@ namespace BenZionVilker
             selectedEmployee.setDailyRate(decimal.Parse(textBox_dailyRate.Text));
             selectedEmployee.setCertificationNo(textBox_certificationNo.Text);
             selectedEmployee.setStatus((EmployeeStatus)Enum.Parse(typeof(EmployeeStatus), comboBox_status.Text));
-            selectedEmployee.updateEmployee();
+            if (!selectedEmployee.updateEmployee()) return;
 
             MessageBox.Show("העובד עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -175,7 +190,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את העובד?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedEmployee.deleteEmployee();
+            if (!selectedEmployee.deleteEmployee()) return;
             clearForm();
             loadEmployees();
         }

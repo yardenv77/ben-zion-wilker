@@ -33,8 +33,8 @@ namespace BenZionVilker
             this.status = status;
             if (is_new)
             {
-                this.createProject();
-                Program.Projects.Add(this);
+                if (this.createProject())
+                    Program.Projects.Add(this);
             }
         }
 
@@ -59,7 +59,7 @@ namespace BenZionVilker
         public void setActualEndDate(DateTime? actualEndDate) { this.actualEndDate = actualEndDate; }
         public void setStatus(ProjectStatus status) { this.status = status; }
 
-        public void createProject()
+        public bool createProject()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_project_create @project_id, @tender_id, @project_manager_employee_id, @name, @address, @plannedStartDate, @plannedEndDate, @actualStartDate, @actualEndDate, @status";
@@ -74,10 +74,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@actualEndDate", (object)this.actualEndDate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateProject()
+        public bool updateProject()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_project_update @project_id, @tender_id, @project_manager_employee_id, @name, @address, @plannedStartDate, @plannedEndDate, @actualStartDate, @actualEndDate, @status";
@@ -92,17 +92,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@actualEndDate", (object)this.actualEndDate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteProject()
+        public bool deleteProject()
         {
-            Program.Projects.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_project_delete @project_id";
             cmd.Parameters.AddWithValue("@project_id", this.projectId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.Projects.Remove(this);
+            return success;
         }
 
         public static void initProjects()

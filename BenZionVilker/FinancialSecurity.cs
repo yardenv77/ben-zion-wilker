@@ -57,9 +57,10 @@ namespace BenZionVilker
         public void setExpiryDate(DateTime expiryDate) { this.expiryDate = expiryDate; }
         public void setStatus(SecurityStatus status) { this.status = status; }
 
-        // Writes only the FinancialSecurity (parent-table) row. BankGuarantee/InsurancePolicy
-        // call this plus their own subclass-table SP when overriding create/update/delete.
-        protected void createFinancialSecurity()
+        // Builds (without executing) the FinancialSecurity (parent-table) command.
+        // BankGuarantee/InsurancePolicy combine this with their own subclass-table command
+        // and run both in one transaction via SQL_CON.execute_non_query_transactional.
+        protected SqlCommand createFinancialSecurity()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_financial_security_create @financial_security_id, @project_id, @amount, @issueDate, @expiryDate, @status";
@@ -69,11 +70,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@issueDate", this.issueDate);
             cmd.Parameters.AddWithValue("@expiryDate", this.expiryDate);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
-            SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return cmd;
         }
 
-        protected void updateFinancialSecurity()
+        protected SqlCommand updateFinancialSecurity()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_financial_security_update @financial_security_id, @project_id, @amount, @issueDate, @expiryDate, @status";
@@ -83,17 +83,15 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@issueDate", this.issueDate);
             cmd.Parameters.AddWithValue("@expiryDate", this.expiryDate);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
-            SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return cmd;
         }
 
-        protected void deleteFinancialSecurity()
+        protected SqlCommand deleteFinancialSecurity()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_financial_security_delete @financial_security_id";
             cmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
-            SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return cmd;
         }
 
         // Loads FinancialSecurity + BankGuarantee + InsurancePolicy via three basic CRUD

@@ -68,7 +68,9 @@ namespace BenZionVilker
             if (!validateFields()) return;
 
             int id = TradeCategory.getNextTradeCategoryId();
-            new TradeCategory(id, textBox_categoryName.Text, true);
+            TradeCategory tc = new TradeCategory(id, textBox_categoryName.Text, true);
+
+            if (!Program.TradeCategories.Contains(tc)) return;
 
             MessageBox.Show("תחום העיסוק נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -85,7 +87,7 @@ namespace BenZionVilker
             if (!validateFields()) return;
 
             selectedTradeCategory.setCategoryName(textBox_categoryName.Text);
-            selectedTradeCategory.updateTradeCategory();
+            if (!selectedTradeCategory.updateTradeCategory()) return;
 
             MessageBox.Show("תחום העיסוק עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -103,7 +105,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את תחום העיסוק?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedTradeCategory.deleteTradeCategory();
+            if (!selectedTradeCategory.deleteTradeCategory()) return;
             clearForm();
             loadTradeCategories();
         }

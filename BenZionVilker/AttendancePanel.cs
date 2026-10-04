@@ -131,8 +131,10 @@ namespace BenZionVilker
             if (!validateFields()) return;
 
             int id = Attendance.getNextAttendanceId();
-            new Attendance(id, resolveSelectedEmployee(), resolveSelectedDailyWorkLog(),
+            Attendance attendance = new Attendance(id, resolveSelectedEmployee(), resolveSelectedDailyWorkLog(),
                 TimeSpan.Parse(textBox_startTime.Text), TimeSpan.Parse(textBox_endTime.Text), textBox_taskDescription.Text, true);
+
+            if (!Program.Attendances.Contains(attendance)) return;
 
             MessageBox.Show("הנוכחות נשמרה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -153,7 +155,7 @@ namespace BenZionVilker
             selectedAttendance.setStartTime(TimeSpan.Parse(textBox_startTime.Text));
             selectedAttendance.setEndTime(TimeSpan.Parse(textBox_endTime.Text));
             selectedAttendance.setTaskDescription(textBox_taskDescription.Text);
-            selectedAttendance.updateAttendance();
+            if (!selectedAttendance.updateAttendance()) return;
 
             MessageBox.Show("הנוכחות עודכנה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -171,7 +173,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את רשומת הנוכחות?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedAttendance.deleteAttendance();
+            if (!selectedAttendance.deleteAttendance()) return;
             clearForm();
             loadAttendances();
         }

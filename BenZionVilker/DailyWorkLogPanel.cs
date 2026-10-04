@@ -145,8 +145,10 @@ namespace BenZionVilker
 
             int id = DailyWorkLog.getNextDailyWorkLogId();
             WorkLogStatus status = (WorkLogStatus)Enum.Parse(typeof(WorkLogStatus), comboBox_status.Text);
-            new DailyWorkLog(id, resolveSelectedSubcontractor(), resolveSelectedSubmittedBy(), DateTime.Parse(textBox_logDate.Text),
+            DailyWorkLog log = new DailyWorkLog(id, resolveSelectedSubcontractor(), resolveSelectedSubmittedBy(), DateTime.Parse(textBox_logDate.Text),
                 double.Parse(textBox_plannedQuantity.Text), double.Parse(textBox_completedQuantity.Text), status, true);
+
+            if (!Program.DailyWorkLogs.Contains(log)) return;
 
             MessageBox.Show("יומן העבודה נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -168,7 +170,7 @@ namespace BenZionVilker
             selectedLog.setPlannedQuantity(double.Parse(textBox_plannedQuantity.Text));
             selectedLog.setCompletedQuantity(double.Parse(textBox_completedQuantity.Text));
             selectedLog.setStatus((WorkLogStatus)Enum.Parse(typeof(WorkLogStatus), comboBox_status.Text));
-            selectedLog.updateDailyWorkLog();
+            if (!selectedLog.updateDailyWorkLog()) return;
 
             MessageBox.Show("יומן העבודה עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -186,7 +188,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את יומן העבודה?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedLog.deleteDailyWorkLog();
+            if (!selectedLog.deleteDailyWorkLog()) return;
             clearForm();
             loadLogs();
         }

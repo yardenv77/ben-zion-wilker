@@ -20,8 +20,8 @@ namespace BenZionVilker
             this.hoursOperated = hoursOperated;
             if (is_new)
             {
-                this.createEquipmentUsage();
-                Program.EquipmentUsages.Add(this);
+                if (this.createEquipmentUsage())
+                    Program.EquipmentUsages.Add(this);
             }
         }
 
@@ -34,7 +34,7 @@ namespace BenZionVilker
         public void setDailyWorkLog(DailyWorkLog dailyWorkLog) { this.dailyWorkLog = dailyWorkLog; }
         public void setHoursOperated(double hoursOperated) { this.hoursOperated = hoursOperated; }
 
-        public void createEquipmentUsage()
+        public bool createEquipmentUsage()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_equipment_usage_create @equipment_usage_id, @equipment_id, @daily_work_log_id, @hoursOperated";
@@ -43,10 +43,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@daily_work_log_id", this.dailyWorkLog.getDailyWorkLogId());
             cmd.Parameters.AddWithValue("@hoursOperated", this.hoursOperated);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateEquipmentUsage()
+        public bool updateEquipmentUsage()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_equipment_usage_update @equipment_usage_id, @equipment_id, @daily_work_log_id, @hoursOperated";
@@ -55,17 +55,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@daily_work_log_id", this.dailyWorkLog.getDailyWorkLogId());
             cmd.Parameters.AddWithValue("@hoursOperated", this.hoursOperated);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteEquipmentUsage()
+        public bool deleteEquipmentUsage()
         {
-            Program.EquipmentUsages.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_equipment_usage_delete @equipment_usage_id";
             cmd.Parameters.AddWithValue("@equipment_usage_id", this.equipmentUsageId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.EquipmentUsages.Remove(this);
+            return success;
         }
 
         public static void initEquipmentUsages()

@@ -32,7 +32,10 @@ namespace BenZionVilker
 
         /// <summary>
         /// ביצוע פעולה שמשנה נתונים בבסיס הנתונים (INSERT, UPDATE, DELETE).
-        /// הפעולה לא מחזירה נתונים - רק מבצעת שינוי.
+        /// מחזירה bool: true אם הפעולה הצליחה, false אם נכשלה -- כך שהקוד הקורא (הישות
+        /// ואז המסך) יודע בוודאות אם ההצלחה "התממשה" בפועל, ולא רק הניח שכך.
+        /// לא מציגה הודעת הצלחה גנרית -- כל מסך מציג הודעה משלו, רק כשההצלחה אכן קרתה
+        /// (ראו button_save/update/delete_Click בכל *Panel.cs).
         ///
         /// הזרימה:
         /// 1. פתיחת חיבור לבסיס הנתונים
@@ -41,23 +44,76 @@ namespace BenZionVilker
         /// 4. סגירת החיבור (תמיד! גם אם הייתה שגיאה)
         /// </summary>
         /// <param name="cmd">פקודת SQL מוכנה עם פרמטרים</param>
-        public void execute_non_query(SqlCommand cmd)
+        /// <returns>true אם הפעולה הצליחה, false אם נכשלה</returns>
+        public bool execute_non_query(SqlCommand cmd)
         {
             try
             {
                 conn.Open();              // שלב 1: פתיחת חיבור
                 cmd.Connection = conn;    // שלב 2: קישור הפקודה לחיבור
                 cmd.ExecuteNonQuery();     // שלב 3: ביצוע (INSERT/UPDATE/DELETE)
-                MessageBox.Show("הפעולה בוצעה בהצלחה", "הודעה", MessageBoxButtons.OK);
+                return true;
+            }
+            catch (SqlException ex) when (ex.Number == 547)
+            {
+                // 547 = הפרת מפתח זר/CHECK ב-SQL Server (למשל: מחיקת ספק שיש לו הזמנות רכש פתוחות)
+                MessageBox.Show("לא ניתן לבצע את הפעולה — קיימות רשומות אחרות במערכת המקושרות לרשומה זו.", "שגיאה", MessageBoxButtons.OK);
+                return false;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("שגיאה בביצוע הפעולה: " + ex.Message, "שגיאה", MessageBoxButtons.OK);
+                return false;
             }
             finally
             {
                 // שלב 4: סגירת החיבור - חייבת לקרות תמיד!
                 // finally מתבצע גם אם הייתה שגיאה וגם אם לא
+                if (conn != null)
+                {
+                    conn.Close();
+                }
+            }
+        }
+
+        /// <summary>
+        /// כמו execute_non_query, אבל מריצה כמה פקודות (בד"כ שורת-הורה + שורת-תת-מחלקה,
+        /// table-per-subclass -- ראו BusinessPartner/FinancialSecurity) בטרנזקציה אחת:
+        /// או שכולן נכתבות, או שאף אחת לא. בלי זה, כישלון בפקודה השנייה היה משאיר שורת-הורה
+        /// "יתומה" בבסיס הנתונים בלי שורת-הבת המתאימה לה.
+        /// </summary>
+        /// <param name="cmds">פקודות SQL מוכנות עם פרמטרים, בסדר הרצה (למשל: הורה לפני בת ביצירה, בת לפני הורה במחיקה)</param>
+        /// <returns>true אם כל הפקודות הצליחו (ו-COMMIT בוצע), false אם אחת מהן נכשלה (ו-ROLLBACK בוצע)</returns>
+        public bool execute_non_query_transactional(params SqlCommand[] cmds)
+        {
+            SqlTransaction tran = null;
+            try
+            {
+                conn.Open();
+                tran = conn.BeginTransaction();
+                foreach (SqlCommand cmd in cmds)
+                {
+                    cmd.Connection = conn;
+                    cmd.Transaction = tran;
+                    cmd.ExecuteNonQuery();
+                }
+                tran.Commit();
+                return true;
+            }
+            catch (SqlException ex) when (ex.Number == 547)
+            {
+                tran?.Rollback();
+                MessageBox.Show("לא ניתן לבצע את הפעולה — קיימות רשומות אחרות במערכת המקושרות לרשומה זו.", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                tran?.Rollback();
+                MessageBox.Show("שגיאה בביצוע הפעולה: " + ex.Message, "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            finally
+            {
                 if (conn != null)
                 {
                     conn.Close();

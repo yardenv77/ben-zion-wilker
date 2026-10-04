@@ -128,8 +128,10 @@ namespace BenZionVilker
             PaymentRequestStatus status = (PaymentRequestStatus)Enum.Parse(typeof(PaymentRequestStatus), comboBox_status.Text);
             DateTime? approvalDate = string.IsNullOrWhiteSpace(textBox_approvalDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_approvalDate.Text);
 
-            new PaymentRequest(id, resolveSelectedProject(), decimal.Parse(textBox_amount.Text),
+            PaymentRequest paymentRequest = new PaymentRequest(id, resolveSelectedProject(), decimal.Parse(textBox_amount.Text),
                 DateTime.Parse(textBox_submissionDate.Text), approvalDate, status, true);
+
+            if (!Program.PaymentRequests.Contains(paymentRequest)) return;
 
             MessageBox.Show("בקשת התשלום נשמרה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -150,7 +152,7 @@ namespace BenZionVilker
             selectedPaymentRequest.setSubmissionDate(DateTime.Parse(textBox_submissionDate.Text));
             selectedPaymentRequest.setApprovalDate(string.IsNullOrWhiteSpace(textBox_approvalDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_approvalDate.Text));
             selectedPaymentRequest.setStatus((PaymentRequestStatus)Enum.Parse(typeof(PaymentRequestStatus), comboBox_status.Text));
-            selectedPaymentRequest.updatePaymentRequest();
+            if (!selectedPaymentRequest.updatePaymentRequest()) return;
 
             MessageBox.Show("בקשת התשלום עודכנה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -168,7 +170,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את בקשת התשלום?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedPaymentRequest.deletePaymentRequest();
+            if (!selectedPaymentRequest.deletePaymentRequest()) return;
             clearForm();
             loadPaymentRequests();
         }

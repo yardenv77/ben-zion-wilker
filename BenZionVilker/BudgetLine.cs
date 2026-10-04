@@ -21,8 +21,8 @@ namespace BenZionVilker
             this.actualAmount = actualAmount;
             if (is_new)
             {
-                this.createBudgetLine();
-                Program.BudgetLines.Add(this);
+                if (this.createBudgetLine())
+                    Program.BudgetLines.Add(this);
             }
         }
 
@@ -37,7 +37,7 @@ namespace BenZionVilker
         public void setPlannedAmount(decimal plannedAmount) { this.plannedAmount = plannedAmount; }
         public void setActualAmount(decimal actualAmount) { this.actualAmount = actualAmount; }
 
-        public void createBudgetLine()
+        public bool createBudgetLine()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_budget_line_create @budget_line_id, @project_id, @category, @plannedAmount, @actualAmount";
@@ -47,10 +47,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@plannedAmount", this.plannedAmount);
             cmd.Parameters.AddWithValue("@actualAmount", this.actualAmount);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateBudgetLine()
+        public bool updateBudgetLine()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_budget_line_update @budget_line_id, @project_id, @category, @plannedAmount, @actualAmount";
@@ -60,17 +60,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@plannedAmount", this.plannedAmount);
             cmd.Parameters.AddWithValue("@actualAmount", this.actualAmount);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteBudgetLine()
+        public bool deleteBudgetLine()
         {
-            Program.BudgetLines.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_budget_line_delete @budget_line_id";
             cmd.Parameters.AddWithValue("@budget_line_id", this.budgetLineId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.BudgetLines.Remove(this);
+            return success;
         }
 
         public static void initBudgetLines()

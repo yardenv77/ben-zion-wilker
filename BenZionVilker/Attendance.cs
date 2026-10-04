@@ -25,8 +25,8 @@ namespace BenZionVilker
             this.taskDescription = taskDescription;
             if (is_new)
             {
-                this.createAttendance();
-                Program.Attendances.Add(this);
+                if (this.createAttendance())
+                    Program.Attendances.Add(this);
             }
         }
 
@@ -44,7 +44,7 @@ namespace BenZionVilker
         public void setEndTime(TimeSpan endTime) { this.endTime = endTime; }
         public void setTaskDescription(string taskDescription) { this.taskDescription = taskDescription; }
 
-        public void createAttendance()
+        public bool createAttendance()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_attendance_create @attendance_id, @employee_id, @daily_work_log_id, @startTime, @endTime, @taskDescription";
@@ -55,10 +55,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@endTime", this.endTime);
             cmd.Parameters.AddWithValue("@taskDescription", this.taskDescription);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateAttendance()
+        public bool updateAttendance()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_attendance_update @attendance_id, @employee_id, @daily_work_log_id, @startTime, @endTime, @taskDescription";
@@ -69,17 +69,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@endTime", this.endTime);
             cmd.Parameters.AddWithValue("@taskDescription", this.taskDescription);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteAttendance()
+        public bool deleteAttendance()
         {
-            Program.Attendances.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_attendance_delete @attendance_id";
             cmd.Parameters.AddWithValue("@attendance_id", this.attendanceId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.Attendances.Remove(this);
+            return success;
         }
 
         public static void initAttendances()

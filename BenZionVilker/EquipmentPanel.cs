@@ -107,7 +107,9 @@ namespace BenZionVilker
 
             int id = Equipment.getNextEquipmentId();
             EquipmentStatus status = (EquipmentStatus)Enum.Parse(typeof(EquipmentStatus), comboBox_status.Text);
-            new Equipment(id, textBox_licenseNumber.Text, textBox_equipmentType.Text, textBox_description.Text, decimal.Parse(textBox_dailyCost.Text), status, true);
+            Equipment eq = new Equipment(id, textBox_licenseNumber.Text, textBox_equipmentType.Text, textBox_description.Text, decimal.Parse(textBox_dailyCost.Text), status, true);
+
+            if (!Program.Equipments.Contains(eq)) return;
 
             MessageBox.Show("הציוד נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -128,7 +130,7 @@ namespace BenZionVilker
             selectedEquipment.setDescription(textBox_description.Text);
             selectedEquipment.setDailyCost(decimal.Parse(textBox_dailyCost.Text));
             selectedEquipment.setStatus((EquipmentStatus)Enum.Parse(typeof(EquipmentStatus), comboBox_status.Text));
-            selectedEquipment.updateEquipment();
+            if (!selectedEquipment.updateEquipment()) return;
 
             MessageBox.Show("הציוד עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -146,7 +148,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את הציוד?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedEquipment.deleteEquipment();
+            if (!selectedEquipment.deleteEquipment()) return;
             clearForm();
             loadEquipments();
         }

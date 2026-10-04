@@ -28,8 +28,8 @@ namespace BenZionVilker
             this.status = status;
             if (is_new)
             {
-                this.createTender();
-                Program.Tenders.Add(this);
+                if (this.createTender())
+                    Program.Tenders.Add(this);
             }
         }
 
@@ -50,7 +50,7 @@ namespace BenZionVilker
         public void setPublishedDate(DateTime publishedDate) { this.publishedDate = publishedDate; }
         public void setStatus(TenderStatus status) { this.status = status; }
 
-        public void createTender()
+        public bool createTender()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_tender_create @tender_id, @tenderNumber, @client_id, @title, @estimatedValue, @submissionDeadline, @publishedDate, @status";
@@ -63,10 +63,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@publishedDate", this.publishedDate);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateTender()
+        public bool updateTender()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_tender_update @tender_id, @tenderNumber, @client_id, @title, @estimatedValue, @submissionDeadline, @publishedDate, @status";
@@ -79,17 +79,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@publishedDate", this.publishedDate);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteTender()
+        public bool deleteTender()
         {
-            Program.Tenders.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_tender_delete @tender_id";
             cmd.Parameters.AddWithValue("@tender_id", this.tenderId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.Tenders.Remove(this);
+            return success;
         }
 
         public static void initTenders()

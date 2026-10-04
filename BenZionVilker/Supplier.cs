@@ -11,46 +11,51 @@ namespace BenZionVilker
         {
             if (is_new)
             {
-                this.createSupplier();
-                Program.BusinessPartners.Add(this);
+                if (this.createSupplier())
+                    Program.BusinessPartners.Add(this);
             }
         }
 
-        // Writes both the BusinessPartner (parent) row and the Supplier (child) row.
-        public void createSupplier()
+        // Writes both the BusinessPartner (parent) row and the Supplier (child) row,
+        // in one transaction -- either both are written, or neither is (no orphaned parent row).
+        public bool createSupplier()
         {
-            this.createBusinessPartner();
+            SqlCommand parentCmd = this.createBusinessPartner();
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_supplier_create @business_partner_id";
-            cmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_supplier_create @business_partner_id";
+            childCmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query_transactional(parentCmd, childCmd);
         }
 
-        public void updateSupplier()
+        public bool updateSupplier()
         {
-            this.updateBusinessPartner();
+            SqlCommand parentCmd = this.updateBusinessPartner();
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_supplier_update @business_partner_id";
-            cmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_supplier_update @business_partner_id";
+            childCmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query_transactional(parentCmd, childCmd);
         }
 
-        // Child row must be deleted before the parent row (FK has no cascade).
-        public void deleteSupplier()
+        // Child row deleted before the parent row (FK has no cascade), both in one transaction.
+        public bool deleteSupplier()
         {
-            Program.BusinessPartners.Remove(this);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_supplier_delete @business_partner_id";
+            childCmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_supplier_delete @business_partner_id";
-            cmd.Parameters.AddWithValue("@business_partner_id", this.businessPartnerId);
+            SqlCommand parentCmd = this.deleteBusinessPartner();
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
-
-            this.deleteBusinessPartner();
+            bool success = SC.execute_non_query_transactional(childCmd, parentCmd);
+            if (success)
+                Program.BusinessPartners.Remove(this);
+            return success;
         }
     }
 }

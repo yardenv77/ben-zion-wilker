@@ -26,8 +26,8 @@ namespace BenZionVilker
             this.status = status;
             if (is_new)
             {
-                this.createDailyWorkLog();
-                Program.DailyWorkLogs.Add(this);
+                if (this.createDailyWorkLog())
+                    Program.DailyWorkLogs.Add(this);
             }
         }
 
@@ -46,7 +46,7 @@ namespace BenZionVilker
         public void setCompletedQuantity(double completedQuantity) { this.completedQuantity = completedQuantity; }
         public void setStatus(WorkLogStatus status) { this.status = status; }
 
-        public void createDailyWorkLog()
+        public bool createDailyWorkLog()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_daily_work_log_create @daily_work_log_id, @subcontractor_id, @submitted_by_employee_id, @logDate, @plannedQuantity, @completedQuantity, @status";
@@ -58,10 +58,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@completedQuantity", this.completedQuantity);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateDailyWorkLog()
+        public bool updateDailyWorkLog()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_daily_work_log_update @daily_work_log_id, @subcontractor_id, @submitted_by_employee_id, @logDate, @plannedQuantity, @completedQuantity, @status";
@@ -73,17 +73,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@completedQuantity", this.completedQuantity);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteDailyWorkLog()
+        public bool deleteDailyWorkLog()
         {
-            Program.DailyWorkLogs.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_daily_work_log_delete @daily_work_log_id";
             cmd.Parameters.AddWithValue("@daily_work_log_id", this.dailyWorkLogId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.DailyWorkLogs.Remove(this);
+            return success;
         }
 
         public static void initDailyWorkLogs()

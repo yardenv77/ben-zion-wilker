@@ -157,9 +157,11 @@ namespace BenZionVilker
             if (!validateFields()) return;
 
             int id = SupplierPriceQuote.getNextSupplierPriceQuoteId();
-            new SupplierPriceQuote(id, resolveSelectedSupplier(), resolveSelectedTender(), resolveSelectedTradeCategory(),
+            SupplierPriceQuote quote = new SupplierPriceQuote(id, resolveSelectedSupplier(), resolveSelectedTender(), resolveSelectedTradeCategory(),
                 decimal.Parse(textBox_amount.Text), DateTime.Parse(textBox_dateIssued.Text), DateTime.Parse(textBox_validUntil.Text),
                 checkBox_isSelected.Checked, true);
+
+            if (!Program.SupplierPriceQuotes.Contains(quote)) return;
 
             MessageBox.Show("הצעת המחיר נשמרה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -182,7 +184,7 @@ namespace BenZionVilker
             selectedQuote.setDateIssued(DateTime.Parse(textBox_dateIssued.Text));
             selectedQuote.setValidUntil(DateTime.Parse(textBox_validUntil.Text));
             selectedQuote.setIsSelected(checkBox_isSelected.Checked);
-            selectedQuote.updateSupplierPriceQuote();
+            if (!selectedQuote.updateSupplierPriceQuote()) return;
 
             MessageBox.Show("הצעת המחיר עודכנה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -200,7 +202,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את הצעת המחיר?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedQuote.deleteSupplierPriceQuote();
+            if (!selectedQuote.deleteSupplierPriceQuote()) return;
             clearForm();
             loadQuotes();
         }

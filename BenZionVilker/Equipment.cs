@@ -23,8 +23,8 @@ namespace BenZionVilker
             this.status = status;
             if (is_new)
             {
-                this.createEquipment();
-                Program.Equipments.Add(this);
+                if (this.createEquipment())
+                    Program.Equipments.Add(this);
             }
         }
 
@@ -41,7 +41,7 @@ namespace BenZionVilker
         public void setDailyCost(decimal dailyCost) { this.dailyCost = dailyCost; }
         public void setStatus(EquipmentStatus status) { this.status = status; }
 
-        public void createEquipment()
+        public bool createEquipment()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_equipment_create @equipment_id, @licenseNumber, @equipmentType, @description, @dailyCost, @status";
@@ -52,10 +52,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@dailyCost", this.dailyCost);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateEquipment()
+        public bool updateEquipment()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_equipment_update @equipment_id, @licenseNumber, @equipmentType, @description, @dailyCost, @status";
@@ -66,17 +66,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@dailyCost", this.dailyCost);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteEquipment()
+        public bool deleteEquipment()
         {
-            Program.Equipments.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_equipment_delete @equipment_id";
             cmd.Parameters.AddWithValue("@equipment_id", this.equipmentId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.Equipments.Remove(this);
+            return success;
         }
 
         public static void initEquipments()

@@ -104,7 +104,9 @@ namespace BenZionVilker
             if (!validateFields()) return;
 
             int id = Client.getNextClientId();
-            new Client(id, textBox_name.Text, textBox_contactPerson.Text, textBox_phone.Text, textBox_email.Text, textBox_sector.Text, true);
+            Client c = new Client(id, textBox_name.Text, textBox_contactPerson.Text, textBox_phone.Text, textBox_email.Text, textBox_sector.Text, true);
+
+            if (!Program.Clients.Contains(c)) return;
 
             MessageBox.Show("הלקוח נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -125,7 +127,7 @@ namespace BenZionVilker
             selectedClient.setPhone(textBox_phone.Text);
             selectedClient.setEmail(textBox_email.Text);
             selectedClient.setSector(textBox_sector.Text);
-            selectedClient.updateClient();
+            if (!selectedClient.updateClient()) return;
 
             MessageBox.Show("הלקוח עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -143,7 +145,7 @@ namespace BenZionVilker
             DialogResult result = MessageBox.Show("האם למחוק את הלקוח?", "אישור מחיקה", MessageBoxButtons.YesNo);
             if (result != DialogResult.Yes) return;
 
-            selectedClient.deleteClient();
+            if (!selectedClient.deleteClient()) return;
             clearForm();
             loadClients();
         }

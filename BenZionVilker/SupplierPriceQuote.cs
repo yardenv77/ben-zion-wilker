@@ -31,8 +31,8 @@ namespace BenZionVilker
             this.isSelected = isSelected;
             if (is_new)
             {
-                this.createSupplierPriceQuote();
-                Program.SupplierPriceQuotes.Add(this);
+                if (this.createSupplierPriceQuote())
+                    Program.SupplierPriceQuotes.Add(this);
             }
         }
 
@@ -53,7 +53,7 @@ namespace BenZionVilker
         public void setValidUntil(DateTime validUntil) { this.validUntil = validUntil; }
         public void setIsSelected(bool isSelected) { this.isSelected = isSelected; }
 
-        public void createSupplierPriceQuote()
+        public bool createSupplierPriceQuote()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_supplier_price_quote_create @supplier_price_quote_id, @supplier_id, @tender_id, @trade_category_id, @amount, @dateIssued, @validUntil, @isSelected";
@@ -66,10 +66,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@validUntil", this.validUntil);
             cmd.Parameters.AddWithValue("@isSelected", this.isSelected);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateSupplierPriceQuote()
+        public bool updateSupplierPriceQuote()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_supplier_price_quote_update @supplier_price_quote_id, @supplier_id, @tender_id, @trade_category_id, @amount, @dateIssued, @validUntil, @isSelected";
@@ -82,17 +82,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@validUntil", this.validUntil);
             cmd.Parameters.AddWithValue("@isSelected", this.isSelected);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteSupplierPriceQuote()
+        public bool deleteSupplierPriceQuote()
         {
-            Program.SupplierPriceQuotes.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_supplier_price_quote_delete @supplier_price_quote_id";
             cmd.Parameters.AddWithValue("@supplier_price_quote_id", this.supplierPriceQuoteId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.SupplierPriceQuotes.Remove(this);
+            return success;
         }
 
         public static void initSupplierPriceQuotes()

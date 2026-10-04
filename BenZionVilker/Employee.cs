@@ -29,8 +29,8 @@ namespace BenZionVilker
             this.status = status;
             if (is_new)
             {
-                this.createEmployee();
-                Program.Employees.Add(this);
+                if (this.createEmployee())
+                    Program.Employees.Add(this);
             }
         }
 
@@ -52,7 +52,7 @@ namespace BenZionVilker
         public void setCertificationNo(string certificationNo) { this.certificationNo = certificationNo; }
         public void setStatus(EmployeeStatus status) { this.status = status; }
 
-        public void createEmployee()
+        public bool createEmployee()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_employee_create @employee_id, @firstName, @lastName, @nationalId, @role, @dailyRate, @certificationNo, @status";
@@ -65,10 +65,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@certificationNo", this.certificationNo);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateEmployee()
+        public bool updateEmployee()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_employee_update @employee_id, @firstName, @lastName, @nationalId, @role, @dailyRate, @certificationNo, @status";
@@ -81,17 +81,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@certificationNo", this.certificationNo);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteEmployee()
+        public bool deleteEmployee()
         {
-            Program.Employees.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_employee_delete @employee_id";
             cmd.Parameters.AddWithValue("@employee_id", this.employeeId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.Employees.Remove(this);
+            return success;
         }
 
         public static void initEmployees()

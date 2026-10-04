@@ -15,8 +15,8 @@ namespace BenZionVilker
             this.categoryName = categoryName;
             if (is_new)
             {
-                this.createTradeCategory();
-                Program.TradeCategories.Add(this);
+                if (this.createTradeCategory())
+                    Program.TradeCategories.Add(this);
             }
         }
 
@@ -25,34 +25,36 @@ namespace BenZionVilker
 
         public void setCategoryName(string categoryName) { this.categoryName = categoryName; }
 
-        public void createTradeCategory()
+        public bool createTradeCategory()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_trade_category_create @trade_category_id, @categoryName";
             cmd.Parameters.AddWithValue("@trade_category_id", this.tradeCategoryId);
             cmd.Parameters.AddWithValue("@categoryName", this.categoryName);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateTradeCategory()
+        public bool updateTradeCategory()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_trade_category_update @trade_category_id, @categoryName";
             cmd.Parameters.AddWithValue("@trade_category_id", this.tradeCategoryId);
             cmd.Parameters.AddWithValue("@categoryName", this.categoryName);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteTradeCategory()
+        public bool deleteTradeCategory()
         {
-            Program.TradeCategories.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_trade_category_delete @trade_category_id";
             cmd.Parameters.AddWithValue("@trade_category_id", this.tradeCategoryId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.TradeCategories.Remove(this);
+            return success;
         }
 
         public static void initTradeCategories()

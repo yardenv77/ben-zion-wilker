@@ -28,8 +28,8 @@ namespace BenZionVilker
             this.status = status;
             if (is_new)
             {
-                this.createSupplierPayment();
-                Program.SupplierPayments.Add(this);
+                if (this.createSupplierPayment())
+                    Program.SupplierPayments.Add(this);
             }
         }
 
@@ -48,7 +48,7 @@ namespace BenZionVilker
         public void setPaidDate(DateTime? paidDate) { this.paidDate = paidDate; }
         public void setStatus(SupplierPaymentStatus status) { this.status = status; }
 
-        public void createSupplierPayment()
+        public bool createSupplierPayment()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_supplier_payment_create @supplier_payment_id, @invoiceNumber, @business_partner_id, @amount, @dueDate, @paidDate, @status";
@@ -60,10 +60,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@paidDate", (object)this.paidDate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateSupplierPayment()
+        public bool updateSupplierPayment()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_supplier_payment_update @supplier_payment_id, @invoiceNumber, @business_partner_id, @amount, @dueDate, @paidDate, @status";
@@ -75,17 +75,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@paidDate", (object)this.paidDate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteSupplierPayment()
+        public bool deleteSupplierPayment()
         {
-            Program.SupplierPayments.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_supplier_payment_delete @supplier_payment_id";
             cmd.Parameters.AddWithValue("@supplier_payment_id", this.supplierPaymentId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.SupplierPayments.Remove(this);
+            return success;
         }
 
         public static void initSupplierPayments()

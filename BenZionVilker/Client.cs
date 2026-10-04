@@ -23,8 +23,8 @@ namespace BenZionVilker
             this.sector = sector;
             if (is_new)
             {
-                this.createClient();
-                Program.Clients.Add(this);
+                if (this.createClient())
+                    Program.Clients.Add(this);
             }
         }
 
@@ -41,7 +41,7 @@ namespace BenZionVilker
         public void setEmail(string email) { this.email = email; }
         public void setSector(string sector) { this.sector = sector; }
 
-        public void createClient()
+        public bool createClient()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_client_create @client_id, @name, @contactPerson, @phone, @email, @sector";
@@ -52,10 +52,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@email", this.email);
             cmd.Parameters.AddWithValue("@sector", this.sector);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updateClient()
+        public bool updateClient()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_client_update @client_id, @name, @contactPerson, @phone, @email, @sector";
@@ -66,17 +66,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@email", this.email);
             cmd.Parameters.AddWithValue("@sector", this.sector);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deleteClient()
+        public bool deleteClient()
         {
-            Program.Clients.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_client_delete @client_id";
             cmd.Parameters.AddWithValue("@client_id", this.clientId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.Clients.Remove(this);
+            return success;
         }
 
         public static void initClients()

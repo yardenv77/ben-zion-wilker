@@ -24,8 +24,8 @@ namespace BenZionVilker
             this.status = status;
             if (is_new)
             {
-                this.createPaymentRequest();
-                Program.PaymentRequests.Add(this);
+                if (this.createPaymentRequest())
+                    Program.PaymentRequests.Add(this);
             }
         }
 
@@ -61,7 +61,7 @@ namespace BenZionVilker
         public void setApprovalDate(DateTime? approvalDate) { this.approvalDate = approvalDate; }
         public void setStatus(PaymentRequestStatus status) { this.status = status; }
 
-        public void createPaymentRequest()
+        public bool createPaymentRequest()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_payment_request_create @payment_request_id, @project_id, @amount, @submissionDate, @approvalDate, @status";
@@ -72,10 +72,10 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@approvalDate", (object)this.approvalDate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void updatePaymentRequest()
+        public bool updatePaymentRequest()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_payment_request_update @payment_request_id, @project_id, @amount, @submissionDate, @approvalDate, @status";
@@ -86,17 +86,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@approvalDate", (object)this.approvalDate ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@status", this.status.ToString());
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deletePaymentRequest()
+        public bool deletePaymentRequest()
         {
-            Program.PaymentRequests.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_payment_request_delete @payment_request_id";
             cmd.Parameters.AddWithValue("@payment_request_id", this.paymentRequestId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.PaymentRequests.Remove(this);
+            return success;
         }
 
         public static void initPaymentRequests()

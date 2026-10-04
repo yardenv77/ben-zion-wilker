@@ -49,8 +49,8 @@ namespace BenZionVilker
             this.rejectedBy = rejectedBy;
             if (is_new)
             {
-                this.createPurchaseOrder();
-                Program.PurchaseOrders.Add(this);
+                if (this.createPurchaseOrder())
+                    Program.PurchaseOrders.Add(this);
             }
         }
 
@@ -88,7 +88,7 @@ namespace BenZionVilker
         private void setRejectionReason(string rejectionReason) { this.rejectionReason = rejectionReason; }
         private void setClosureReason(ClosureReason? closureReason) { this.closureReason = closureReason; }
 
-        public void createPurchaseOrder()
+        public bool createPurchaseOrder()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_purchase_order_create @purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @approved_by_employee_id, @override_approved_by_employee_id, @orderDate, @totalAmount, @vatAmount, @status, @rejectionReason, @closureReason, @rejectedAt, @archivedAt, @everSubmitted, @rejected_by_employee_id";
@@ -110,13 +110,13 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@everSubmitted", this.everSubmitted);
             cmd.Parameters.AddWithValue("@rejected_by_employee_id", (object)this.rejectedBy?.getEmployeeId() ?? DBNull.Value);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
         // Deliberately does NOT touch status/rejectionReason/closureReason (step 7.4):
         // those three columns are state-machine-owned and change only through the
         // guarded transition methods below, each with its own dedicated procedure.
-        public void updatePurchaseOrder()
+        public bool updatePurchaseOrder()
         {
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_purchase_order_update @purchase_order_id, @poNumber, @supplier_id, @project_id, @created_by_employee_id, @orderDate, @totalAmount, @vatAmount";
@@ -129,17 +129,19 @@ namespace BenZionVilker
             cmd.Parameters.AddWithValue("@totalAmount", this.totalAmount);
             cmd.Parameters.AddWithValue("@vatAmount", this.vatAmount);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query(cmd);
         }
 
-        public void deletePurchaseOrder()
+        public bool deletePurchaseOrder()
         {
-            Program.PurchaseOrders.Remove(this);
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_purchase_order_delete @purchase_order_id";
             cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            bool success = SC.execute_non_query(cmd);
+            if (success)
+                Program.PurchaseOrders.Remove(this);
+            return success;
         }
 
         public static void initPurchaseOrders()

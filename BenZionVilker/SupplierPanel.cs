@@ -101,9 +101,14 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין דוא\"ל", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!double.TryParse(textBox_rating.Text, out _))
+            if (!double.TryParse(textBox_rating.Text, out double rating))
             {
                 MessageBox.Show("יש להזין דירוג תקין", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            if (rating < 0 || rating > 5)
+            {
+                MessageBox.Show("הדירוג חייב להיות בין 0 ל-5", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
             return true;
@@ -128,8 +133,10 @@ namespace BenZionVilker
 
             int id = BusinessPartner.getNextBusinessPartnerId();
             PartnerStatus status = (PartnerStatus)Enum.Parse(typeof(PartnerStatus), comboBox_status.Text);
-            new Supplier(id, textBox_name.Text, textBox_companyRegistrationNo.Text, textBox_contactPerson.Text,
+            Supplier sup = new Supplier(id, textBox_name.Text, textBox_companyRegistrationNo.Text, textBox_contactPerson.Text,
                 textBox_phone.Text, textBox_email.Text, double.Parse(textBox_rating.Text), status, true);
+
+            if (!Program.BusinessPartners.Contains(sup)) return;
 
             MessageBox.Show("הספק נשמר בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -152,7 +159,7 @@ namespace BenZionVilker
             selectedSupplier.setEmail(textBox_email.Text);
             selectedSupplier.setRating(double.Parse(textBox_rating.Text));
             selectedSupplier.setStatus((PartnerStatus)Enum.Parse(typeof(PartnerStatus), comboBox_status.Text));
-            selectedSupplier.updateSupplier();
+            if (!selectedSupplier.updateSupplier()) return;
 
             MessageBox.Show("הספק עודכן בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();
@@ -172,7 +179,7 @@ namespace BenZionVilker
             if (result != DialogResult.Yes) return;
 
             selectedSupplier.setStatus(PartnerStatus.Inactive);
-            selectedSupplier.updateSupplier();
+            if (!selectedSupplier.updateSupplier()) return;
             clearForm();
             loadSuppliers();
         }

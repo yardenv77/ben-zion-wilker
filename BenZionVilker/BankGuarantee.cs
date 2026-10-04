@@ -16,8 +16,8 @@ namespace BenZionVilker
             this.guaranteeNumber = guaranteeNumber;
             if (is_new)
             {
-                this.createBankGuarantee();
-                Program.FinancialSecurities.Add(this);
+                if (this.createBankGuarantee())
+                    Program.FinancialSecurities.Add(this);
             }
         }
 
@@ -27,44 +27,48 @@ namespace BenZionVilker
         public void setBankName(string bankName) { this.bankName = bankName; }
         public void setGuaranteeNumber(string guaranteeNumber) { this.guaranteeNumber = guaranteeNumber; }
 
-        public void createBankGuarantee()
+        public bool createBankGuarantee()
         {
-            this.createFinancialSecurity();
+            SqlCommand parentCmd = this.createFinancialSecurity();
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_bank_guarantee_create @financial_security_id, @bankName, @guaranteeNumber";
-            cmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
-            cmd.Parameters.AddWithValue("@bankName", this.bankName);
-            cmd.Parameters.AddWithValue("@guaranteeNumber", this.guaranteeNumber);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_bank_guarantee_create @financial_security_id, @bankName, @guaranteeNumber";
+            childCmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
+            childCmd.Parameters.AddWithValue("@bankName", this.bankName);
+            childCmd.Parameters.AddWithValue("@guaranteeNumber", this.guaranteeNumber);
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query_transactional(parentCmd, childCmd);
         }
 
-        public void updateBankGuarantee()
+        public bool updateBankGuarantee()
         {
-            this.updateFinancialSecurity();
+            SqlCommand parentCmd = this.updateFinancialSecurity();
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_bank_guarantee_update @financial_security_id, @bankName, @guaranteeNumber";
-            cmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
-            cmd.Parameters.AddWithValue("@bankName", this.bankName);
-            cmd.Parameters.AddWithValue("@guaranteeNumber", this.guaranteeNumber);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_bank_guarantee_update @financial_security_id, @bankName, @guaranteeNumber";
+            childCmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
+            childCmd.Parameters.AddWithValue("@bankName", this.bankName);
+            childCmd.Parameters.AddWithValue("@guaranteeNumber", this.guaranteeNumber);
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
+            return SC.execute_non_query_transactional(parentCmd, childCmd);
         }
 
-        // Child row must be deleted before the parent row (FK has no cascade).
-        public void deleteBankGuarantee()
+        // Child row deleted before the parent row (FK has no cascade), both in one transaction.
+        public bool deleteBankGuarantee()
         {
-            Program.FinancialSecurities.Remove(this);
+            SqlCommand childCmd = new SqlCommand();
+            childCmd.CommandText = "EXECUTE sp_bank_guarantee_delete @financial_security_id";
+            childCmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
 
-            SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_bank_guarantee_delete @financial_security_id";
-            cmd.Parameters.AddWithValue("@financial_security_id", this.financialSecurityId);
+            SqlCommand parentCmd = this.deleteFinancialSecurity();
+
             SQL_CON SC = new SQL_CON();
-            SC.execute_non_query(cmd);
-
-            this.deleteFinancialSecurity();
+            bool success = SC.execute_non_query_transactional(childCmd, parentCmd);
+            if (success)
+                Program.FinancialSecurities.Remove(this);
+            return success;
         }
     }
 }
