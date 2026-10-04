@@ -42,8 +42,8 @@ Project artifacts are produced in this order: organization/problem context → r
 #### Entity Pattern
 Every entity class is self-contained. Each one owns:
 - Private fields + getters/setters
-- Constructor with `bool is_new` — if `true`, calls `getNextXYZId()` to assign a new PK, then calls `createXYZ()`, then adds to `Program.list`; if `false`, just sets fields (used during loading)
-- `createXYZ()`, `updateXYZ()`, `deleteXYZ()` — each builds a `SqlCommand` with a stored procedure
+- Constructor with `bool is_new` — if `true`, calls `getNextXYZId()` to assign a new PK, then calls `createXYZ()` and only adds to `Program.list` if it returned `true`; if `false`, just sets fields (used during loading)
+- `createXYZ()`, `updateXYZ()`, `deleteXYZ()` — each builds a `SqlCommand` with a stored procedure and returns `bool` (success/failure, propagated from `SQL_CON.execute_non_query`). `SQL_CON` shows a MessageBox itself only on failure (translated Hebrew for FK/CHECK violations, generic Hebrew otherwise) — it never shows a success message, so callers use the returned `bool` to gate their own success messaging and in-memory list updates (a failed `deleteXYZ()` must not remove the entity from `Program.list`). Table-per-subclass entities (`Supplier`/`Subcontractor`, `BankGuarantee`/`InsurancePolicy`) run their parent-row + child-row commands together via `SQL_CON.execute_non_query_transactional(...)`, so a failure on either row rolls back both instead of leaving an orphaned parent-only row.
 - `static initXYZs()` — loads all records from DB into `Program.XYZs`, always calls constructor with `is_new = false`
 - `static seekXYZ(id)` — searches `Program.XYZs` by ID
 - `static getNextXYZId()` — returns `max(id) + 1` over `Program.XYZs` (or `1` if the list is empty). See "Primary Key Strategy" below.
@@ -169,6 +169,7 @@ These apply across all SAD projects:
 | `00e-use-cases.md` | Two-layer VP18-style UC specs for UC-01 through UC-06 (English) |
 | `design/class-diagram.md` / `design/class-diagram.html` | Full domain class diagram: 23 classes, 13 enumerations, 1 external system, all relationships (English; `.html` is the interactive source) |
 | `design/state-diagram.md` / `design/state-diagram.html` | `PurchaseOrder` lifecycle state diagram: 11 states, all transitions with triggers/guards/side-effects, business rules (English; `.html` is the interactive source) |
+| `design/erd.md` / `design/erd.html` | Entity-relationship diagram of the actual database schema per `scripts/create_database.sql`: 23 real tables, real columns/types, real FKs, real CHECK constraints — the physical counterpart to `design/class-diagram.md`'s UML domain model (English; `.html` is the interactive source) |
 | `Part1_Group5.pdf`, `Part2_Group5.pdf` | Original submitted documents (backup — prefer the markdown above; consult these only when the markdown is unclear or a diagram image is needed) |
 
 ---

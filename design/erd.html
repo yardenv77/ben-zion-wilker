@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wilker 1987 Ltd - ERD (Actual Database Schema)</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f1f5f9; font-family: 'IBM Plex Mono', monospace; }
+  .title-bar { padding: 14px 20px 4px; }
+  .title-bar h1 { margin: 0; font-size: 17px; color: #0f172a; }
+  .title-bar p { margin: 4px 0 0; font-size: 11.5px; color: #64748b; }
+  .split-rationale { font-size: 11px; color: #64748b; padding: 0 20px 8px; }
+  svg { display: block; }
+  @media print { .vp-export-btn { display: none; } }
+</style>
+</head>
+<body>
+  <div class="title-bar">
+    <h1>Ben Tzion Wilker 1987 Ltd &mdash; Entity-Relationship Diagram (Real Database Schema)</h1>
+    <p>The actual DB schema as created by scripts/create_database.sql &mdash; 23 real tables, real columns, real FKs, real CHECK constraints. This is the physical/relational counterpart of design/class-diagram.html's UML domain model, not a replacement for it.</p>
+  </div>
+  <div class="split-rationale">No split &mdash; 23 tables on one canvas, grouped spatially the same way as the class diagram: Sales/Tendering (top-left), Procurement &amp; Partners incl. the BusinessPartner/Supplier/Subcontractor hierarchy and PurchaseOrder (top-right), Field Execution (left/bottom-left), Finance &amp; Risk incl. the FinancialSecurity/BankGuarantee/InsurancePolicy hierarchy (right/bottom-right), with Project as the connecting hub. Purple header = table-per-subclass child table. Teal header = association/link table with its own surrogate PK.</div>
+
+  <svg id="diagram-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+
+  <script>
+// ============================================================================
+// TABLES — one entry per real table in scripts/create_database.sql.
+// attrs: "PK <col> : TYPE"       primary key
+//        "PK/FK <col> : TYPE"    table-per-subclass child PK, also FK to parent
+//        "FK <col> : TYPE"       foreign key column (NULL suffix if nullable)
+//        "<col> : TYPE"          plain column
+//        "... {CHECK}"           column carries a CHECK constraint (= an
+//                                 enumeration in CLAUDE.md's Enumerations table) —
+//                                 rendered as a plain column here, never a
+//                                 separate box or a lookup-table FK.
+// kind: 'base' | 'subclass' (table-per-subclass child) | 'link' (association/
+//       join table with its own PK)
+// ============================================================================
+const TABLES = [
+  // ── Sales / Tendering ──
+  { id: 'Client', name: 'Client', kind: 'base', x: 40, y: 40,
+    attrs: ['PK client_id : INT', 'name : NVARCHAR(50)', 'contactPerson : NVARCHAR(50)', 'phone : NVARCHAR(50)', 'email : NVARCHAR(50)', 'sector : NVARCHAR(50)'] },
+  { id: 'Tender', name: 'Tender', kind: 'base', x: 490, y: 40,
+    attrs: ['PK tender_id : INT', 'tenderNumber : NVARCHAR(50)', 'FK client_id : INT', 'title : NVARCHAR(50)', 'estimatedValue : DECIMAL(10,2)', 'submissionDeadline : DATETIME2', 'publishedDate : DATETIME2', 'status : NVARCHAR(20) {CHECK}'] },
+
+  // ── Procurement & Partners ──
+  { id: 'BusinessPartner', name: 'BusinessPartner', kind: 'base', x: 940, y: 40,
+    attrs: ['PK business_partner_id : INT', 'name : NVARCHAR(50)', 'companyRegistrationNo : NVARCHAR(50)', 'contactPerson : NVARCHAR(50)', 'phone : NVARCHAR(50)', 'email : NVARCHAR(50)', 'rating : FLOAT', 'status : NVARCHAR(20) {CHECK}'] },
+  { id: 'PurchaseOrder', name: 'PurchaseOrder', kind: 'base', x: 1390, y: 40,
+    attrs: ['PK purchase_order_id : INT', 'poNumber : NVARCHAR(50)', 'FK supplier_id : INT', 'FK project_id : INT', 'FK created_by_employee_id : INT', 'FK approved_by_employee_id : INT NULL', 'FK override_approved_by_employee_id : INT NULL', 'orderDate : DATETIME2', 'totalAmount : DECIMAL(10,2)', 'vatAmount : DECIMAL(10,2)', 'status : NVARCHAR(30) {CHECK}', 'rejectionReason : NVARCHAR(MAX) NULL', 'closureReason : NVARCHAR(20) NULL {CHECK}', 'rejectedAt : DATETIME2 NULL', 'archivedAt : DATETIME2 NULL', 'everSubmitted : BIT', 'FK rejected_by_employee_id : INT NULL'] },
+  { id: 'SupplierPriceQuote', name: 'SupplierPriceQuote', kind: 'link', x: 1840, y: 40,
+    attrs: ['PK supplier_price_quote_id : INT', 'FK supplier_id : INT', 'FK tender_id : INT', 'FK trade_category_id : INT', 'amount : DECIMAL(10,2)', 'dateIssued : DATETIME2', 'validUntil : DATETIME2', 'isSelected : BIT'] },
+
+  { id: 'TradeCategory', name: 'TradeCategory', kind: 'base', x: 40, y: 420,
+    attrs: ['PK trade_category_id : INT', 'categoryName : NVARCHAR(50)'] },
+  { id: 'Project', name: 'Project', kind: 'base', x: 490, y: 420,
+    attrs: ['PK project_id : INT', 'FK tender_id : INT UNIQUE', 'FK project_manager_employee_id : INT', 'name : NVARCHAR(50)', 'address : NVARCHAR(50)', 'plannedStartDate : DATETIME2', 'plannedEndDate : DATETIME2', 'actualStartDate : DATETIME2 NULL', 'actualEndDate : DATETIME2 NULL', 'status : NVARCHAR(20) {CHECK}'] },
+  { id: 'Supplier', name: 'Supplier', kind: 'subclass', x: 940, y: 420,
+    attrs: ['PK/FK business_partner_id : INT'] },
+  { id: 'Subcontractor', name: 'Subcontractor', kind: 'subclass', x: 1390, y: 420,
+    attrs: ['PK/FK business_partner_id : INT', 'tradeSpecialty : NVARCHAR(50)', 'dailyRate : DECIMAL(10,2)'] },
+  { id: 'PurchaseOrderLine', name: 'PurchaseOrderLine', kind: 'base', x: 1840, y: 420,
+    attrs: ['PK purchase_order_line_id : INT', 'FK purchase_order_id : INT', 'description : NVARCHAR(MAX)', 'unitOfMeasure : NVARCHAR(50)', 'quantity : FLOAT', 'unitPrice : DECIMAL(10,2)', 'receivedQuantity : FLOAT'] },
+
+  // ── Field Execution ──
+  { id: 'Employee', name: 'Employee', kind: 'base', x: 40, y: 840,
+    attrs: ['PK employee_id : INT', 'firstName : NVARCHAR(50)', 'lastName : NVARCHAR(50)', 'nationalId : NVARCHAR(50)', 'role : NVARCHAR(20) {CHECK}', 'dailyRate : DECIMAL(10,2)', 'certificationNo : NVARCHAR(50)', 'status : NVARCHAR(20) {CHECK}'] },
+  { id: 'BudgetLine', name: 'BudgetLine', kind: 'base', x: 490, y: 840,
+    attrs: ['PK budget_line_id : INT', 'FK project_id : INT', 'category : NVARCHAR(50)', 'plannedAmount : DECIMAL(10,2)', 'actualAmount : DECIMAL(10,2)'] },
+  { id: 'SupplierPayment', name: 'SupplierPayment', kind: 'base', x: 940, y: 840,
+    attrs: ['PK supplier_payment_id : INT', 'invoiceNumber : NVARCHAR(50)', 'FK business_partner_id : INT', 'amount : DECIMAL(10,2)', 'dueDate : DATETIME2', 'paidDate : DATETIME2 NULL', 'status : NVARCHAR(20) {CHECK}'] },
+  { id: 'FinancialSecurity', name: 'FinancialSecurity', kind: 'base', x: 1390, y: 840,
+    attrs: ['PK financial_security_id : INT', 'FK project_id : INT', 'amount : DECIMAL(10,2)', 'issueDate : DATETIME2', 'expiryDate : DATETIME2', 'status : NVARCHAR(20) {CHECK}'] },
+
+  { id: 'DailyWorkLog', name: 'DailyWorkLog', kind: 'base', x: 40, y: 1260,
+    attrs: ['PK daily_work_log_id : INT', 'FK subcontractor_id : INT NULL', 'FK submitted_by_employee_id : INT', 'logDate : DATETIME2', 'plannedQuantity : FLOAT', 'completedQuantity : FLOAT', 'status : NVARCHAR(20) {CHECK}'] },
+  { id: 'Attendance', name: 'Attendance', kind: 'link', x: 490, y: 1260,
+    attrs: ['PK attendance_id : INT', 'FK employee_id : INT', 'FK daily_work_log_id : INT', 'startTime : TIME', 'endTime : TIME', 'taskDescription : NVARCHAR(MAX)'] },
+  { id: 'PaymentRequest', name: 'PaymentRequest', kind: 'base', x: 940, y: 1260,
+    attrs: ['PK payment_request_id : INT', 'FK project_id : INT', 'amount : DECIMAL(10,2)', 'submissionDate : DATETIME2', 'approvalDate : DATETIME2 NULL', 'status : NVARCHAR(20) {CHECK}'] },
+  { id: 'BankGuarantee', name: 'BankGuarantee', kind: 'subclass', x: 1390, y: 1260,
+    attrs: ['PK/FK financial_security_id : INT', 'bankName : NVARCHAR(50)', 'guaranteeNumber : NVARCHAR(50)'] },
+  { id: 'InsurancePolicy', name: 'InsurancePolicy', kind: 'subclass', x: 1840, y: 1260,
+    attrs: ['PK/FK financial_security_id : INT', 'insurerName : NVARCHAR(50)', 'policyNumber : NVARCHAR(50)', 'coverageType : NVARCHAR(50)'] },
+
+  { id: 'Equipment', name: 'Equipment', kind: 'base', x: 40, y: 1680,
+    attrs: ['PK equipment_id : INT', 'licenseNumber : NVARCHAR(50)', 'equipmentType : NVARCHAR(50)', 'description : NVARCHAR(MAX)', 'dailyCost : DECIMAL(10,2)', 'status : NVARCHAR(20) {CHECK}'] },
+  { id: 'EquipmentUsage', name: 'EquipmentUsage', kind: 'link', x: 490, y: 1680,
+    attrs: ['PK equipment_usage_id : INT', 'FK equipment_id : INT', 'FK daily_work_log_id : INT', 'hoursOperated : FLOAT'] },
+  { id: 'EquipmentAssignment', name: 'EquipmentAssignment', kind: 'link', x: 940, y: 1680,
+    attrs: ['PK equipment_assignment_id : INT', 'FK project_id : INT', 'FK equipment_id : INT', 'startDate : DATETIME2', 'endDate : DATETIME2 NULL'] },
+  { id: 'SubmittedDocument', name: 'SubmittedDocument', kind: 'base', x: 1390, y: 1680,
+    attrs: ['PK submitted_document_id : INT', 'FK payment_request_id : INT', 'type : NVARCHAR(20) {CHECK}', 'receivedOn : DATETIME2'] }
+];
+
+// ============================================================================
+// FKS — one entry per real FOREIGN KEY constraint in create_database.sql.
+// Every FK here is a simple N:1 (the 'from' table's FK column -> the 'to'
+// table's PK); none of them need UML-style 0..*/1 multiplicity labels.
+// ============================================================================
+const FKS = [
+  { id: 'fk1',  from: 'Supplier',             to: 'BusinessPartner', col: 'business_partner_id' },
+  { id: 'fk2',  from: 'Subcontractor',        to: 'BusinessPartner', col: 'business_partner_id' },
+  { id: 'fk3',  from: 'DailyWorkLog',         to: 'Subcontractor',   col: 'subcontractor_id' },
+  { id: 'fk4',  from: 'DailyWorkLog',         to: 'Employee',        col: 'submitted_by_employee_id' },
+  { id: 'fk5',  from: 'Tender',               to: 'Client',          col: 'client_id' },
+  { id: 'fk6',  from: 'Project',              to: 'Tender',          col: 'tender_id' },
+  { id: 'fk7',  from: 'Project',              to: 'Employee',        col: 'project_manager_employee_id' },
+  { id: 'fk8',  from: 'FinancialSecurity',    to: 'Project',         col: 'project_id' },
+  { id: 'fk9',  from: 'BankGuarantee',        to: 'FinancialSecurity', col: 'financial_security_id' },
+  { id: 'fk10', from: 'InsurancePolicy',      to: 'FinancialSecurity', col: 'financial_security_id' },
+  { id: 'fk11', from: 'BudgetLine',           to: 'Project',         col: 'project_id' },
+  { id: 'fk12', from: 'PaymentRequest',       to: 'Project',         col: 'project_id' },
+  { id: 'fk13', from: 'SubmittedDocument',    to: 'PaymentRequest',  col: 'payment_request_id' },
+  { id: 'fk14', from: 'PurchaseOrder',        to: 'Supplier',        col: 'supplier_id' },
+  { id: 'fk15', from: 'PurchaseOrder',        to: 'Project',         col: 'project_id' },
+  { id: 'fk16', from: 'PurchaseOrder',        to: 'Employee',        col: 'created_by_employee_id' },
+  { id: 'fk17', from: 'PurchaseOrder',        to: 'Employee',        col: 'approved_by_employee_id' },
+  { id: 'fk18', from: 'PurchaseOrder',        to: 'Employee',        col: 'override_approved_by_employee_id' },
+  { id: 'fk19', from: 'PurchaseOrder',        to: 'Employee',        col: 'rejected_by_employee_id' },
+  { id: 'fk20', from: 'PurchaseOrderLine',    to: 'PurchaseOrder',   col: 'purchase_order_id' },
+  { id: 'fk21', from: 'SupplierPayment',      to: 'BusinessPartner', col: 'business_partner_id' },
+  { id: 'fk22', from: 'SupplierPriceQuote',   to: 'Supplier',        col: 'supplier_id' },
+  { id: 'fk23', from: 'SupplierPriceQuote',   to: 'Tender',          col: 'tender_id' },
+  { id: 'fk24', from: 'SupplierPriceQuote',   to: 'TradeCategory',   col: 'trade_category_id' },
+  { id: 'fk25', from: 'Attendance',           to: 'Employee',        col: 'employee_id' },
+  { id: 'fk26', from: 'Attendance',           to: 'DailyWorkLog',    col: 'daily_work_log_id' },
+  { id: 'fk27', from: 'EquipmentUsage',       to: 'Equipment',       col: 'equipment_id' },
+  { id: 'fk28', from: 'EquipmentUsage',       to: 'DailyWorkLog',    col: 'daily_work_log_id' },
+  { id: 'fk29', from: 'EquipmentAssignment',  to: 'Project',         col: 'project_id' },
+  { id: 'fk30', from: 'EquipmentAssignment',  to: 'Equipment',       col: 'equipment_id' }
+];
+
+// ============================================================================
+// NOTES — how this real-schema ERD differs from the idealized UML class
+// diagram (design/class-diagram.html / design/class-diagram.md).
+// ============================================================================
+const NOTES = [
+  { id: 'nSubclass', x: 40, y: 1900, w: 640,
+    title: 'Table-per-subclass, not a UML generalization arrow',
+    lines: [
+      'BusinessPartner -> Supplier / Subcontractor and FinancialSecurity ->',
+      'BankGuarantee / InsurancePolicy are each a base table plus one table',
+      'per subclass (purple header). The subclass table\'s PK is also its FK',
+      'back to the base table (PK/FK business_partner_id, PK/FK',
+      'financial_security_id) -- loaded via LEFT JOIN + DBNull.Value check.',
+      'No "extends" arrow exists in SQL; this FK *is* the inheritance link.'
+    ] },
+  { id: 'nLink', x: 740, y: 1900, w: 620,
+    title: 'Association classes are real join tables here',
+    lines: [
+      'SupplierPriceQuote, Attendance, EquipmentUsage and EquipmentAssignment',
+      '(teal header) are plain tables with their own surrogate PK and one FK',
+      'per side they link -- not UML association-class notation. E.g.',
+      'SupplierPriceQuote has its own supplier_price_quote_id PK plus three',
+      'FKs (supplier_id, tender_id, trade_category_id), not a diamond on a',
+      'line between three classes.'
+    ] },
+  { id: 'nEnum', x: 1420, y: 1900, w: 540,
+    title: 'Enumerations are CHECK constraints, not boxes',
+    lines: [
+      'Every {CHECK}-tagged column (TenderStatus, ProjectStatus, PartnerStatus,',
+      'POStatus, ClosureReason, EmployeeRole, EmployeeStatus, WorkLogStatus,',
+      'EquipmentStatus, SecurityStatus, PaymentRequestStatus, DocumentType,',
+      'SupplierPaymentStatus) is a plain NVARCHAR column constrained inline --',
+      'no lookup table, no FK, no separate enumeration box.'
+    ] }
+];
+
+// ── Constants ─────────────────────────────────────────────────────────────
+const HDR_H = 28, HDR_H_STEREO = 38, PAD = 6, LINE_H = 14;
+const FM = 'font-family="IBM Plex Mono, monospace"';
+
+function escXml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function stereotypeOf(t) {
+  return t.kind === 'subclass' ? '«table-per-subclass»' : t.kind === 'link' ? '«join / link table»' : null;
+}
+
+function boxH(t) {
+  const hdrH = stereotypeOf(t) ? HDR_H_STEREO : HDR_H;
+  return hdrH + PAD + t.attrs.length * LINE_H + PAD;
+}
+
+function boxW(t) {
+  const longest = [...t.attrs, t.name, stereotypeOf(t) || '']
+    .reduce((m, s) => Math.max(m, s.length), 0);
+  return Math.max(140, Math.ceil(longest * 6.5) + 16);
+}
+
+function rectOf(t) { return { x: t.x, y: t.y, w: boxW(t), h: boxH(t) }; }
+
+function attrStyle(line) {
+  if (line.indexOf('PK/FK') === 0) return { weight: '700', style: 'normal', deco: 'underline', color: '#1e293b' };
+  if (line.indexOf('PK ') === 0)   return { weight: '700', style: 'normal', deco: 'underline', color: '#1e293b' };
+  if (line.indexOf('FK ') === 0)   return { weight: '400', style: 'italic', deco: 'none',      color: '#b45309' };
+  return { weight: '400', style: 'normal', deco: 'none', color: '#1e293b' };
+}
+
+function svgBox(t) {
+  const w = boxW(t), h = boxH(t), { x, y } = t;
+  const stereo = stereotypeOf(t);
+  const hdrH = stereo ? HDR_H_STEREO : HDR_H;
+  const hdrFill = t.kind === 'subclass' ? '#7c3aed' : t.kind === 'link' ? '#0f766e' : '#1e40af';
+  const border   = t.kind === 'subclass' ? '#7c3aed' : t.kind === 'link' ? '#0f766e' : '#1e40af';
+
+  let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="white" stroke="${border}" stroke-width="2" rx="2"/>`;
+  s += `<rect x="${x}" y="${y}" width="${w}" height="${hdrH}" fill="${hdrFill}" rx="2"/>`;
+
+  if (stereo) {
+    s += `<text x="${x + w / 2}" y="${y + 13}" text-anchor="middle" fill="white" font-size="9" ${FM}>${escXml(stereo)}</text>`;
+  }
+  const nameY = stereo ? y + hdrH - 8 : y + hdrH / 2 + 4;
+  s += `<text x="${x + w / 2}" y="${nameY}" text-anchor="middle" fill="white" font-size="11" font-weight="700" ${FM}>${escXml(t.name)}</text>`;
+
+  const divY = y + hdrH;
+  s += `<line x1="${x}" y1="${divY}" x2="${x + w}" y2="${divY}" stroke="${border}" stroke-width="1"/>`;
+
+  let curY = divY + PAD + 10;
+  for (const a of t.attrs) {
+    const st = attrStyle(a);
+    s += `<text x="${x + 6}" y="${curY}" text-anchor="start" fill="${st.color}" font-size="10.5" font-weight="${st.weight}" font-style="${st.style}" text-decoration="${st.deco}" ${FM}>${escXml(a)}</text>`;
+    curY += LINE_H;
+  }
+  return s;
+}
+
+// ── Rectangle/line intersection: point where the line from rect's center
+//    toward (tx,ty) crosses the rectangle boundary. Used to auto-attach FK
+//    lines to box edges without hand-placed coordinates. ───────────────────
+function edgeIntersect(rect, tx, ty) {
+  const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+  const dx = tx - cx, dy = ty - cy;
+  if (dx === 0 && dy === 0) return [cx, cy];
+  const cand = [];
+  if (dx !== 0) {
+    let t = (rect.x - cx) / dx, y = cy + t * dy;
+    if (t > 0 && y >= rect.y && y <= rect.y + rect.h) cand.push([t, [rect.x, y]]);
+    t = (rect.x + rect.w - cx) / dx; y = cy + t * dy;
+    if (t > 0 && y >= rect.y && y <= rect.y + rect.h) cand.push([t, [rect.x + rect.w, y]]);
+  }
+  if (dy !== 0) {
+    let t = (rect.y - cy) / dy, x = cx + t * dx;
+    if (t > 0 && x >= rect.x && x <= rect.x + rect.w) cand.push([t, [x, rect.y]]);
+    t = (rect.y + rect.h - cy) / dy; x = cx + t * dx;
+    if (t > 0 && x >= rect.x && x <= rect.x + rect.w) cand.push([t, [x, rect.y + rect.h]]);
+  }
+  cand.sort((a, b) => a[0] - b[0]);
+  return cand.length ? cand[0][1] : [cx, cy];
+}
+
+// Group parallel FKs between the same unordered pair of tables so they fan
+// out instead of drawing exactly on top of each other (e.g. the four
+// PurchaseOrder -> Employee role FKs).
+function groupKey(f) { return [f.from, f.to].sort().join('|'); }
+function computeGroups() {
+  const groups = {};
+  for (const f of FKS) { const k = groupKey(f); (groups[k] = groups[k] || []).push(f); }
+  const indexInGroup = {};
+  for (const k in groups) groups[k].forEach((f, i) => { indexInGroup[f.id] = { i, n: groups[k].length }; });
+  return indexInGroup;
+}
+const FK_GROUP_INDEX = computeGroups();
+
+function svgRel(f) {
+  const tblById = id => TABLES.find(t => t.id === id);
+  const fromRect = rectOf(tblById(f.from)), toRect = rectOf(tblById(f.to));
+  const fromC = [fromRect.x + fromRect.w / 2, fromRect.y + fromRect.h / 2];
+  const toC = [toRect.x + toRect.w / 2, toRect.y + toRect.h / 2];
+
+  let p1 = edgeIntersect(fromRect, toC[0], toC[1]);
+  let p2 = edgeIntersect(toRect, fromC[0], fromC[1]);
+
+  // Fan out parallel edges between the same two boxes along the perpendicular
+  // of the line direction, centered on 0.
+  const { i, n } = FK_GROUP_INDEX[f.id];
+  if (n > 1) {
+    const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = -dy / len, uy = dx / len; // perpendicular unit vector
+    const step = 14;
+    const offset = (i - (n - 1) / 2) * step;
+    p1 = [p1[0] + ux * offset, p1[1] + uy * offset];
+    p2 = [p2[0] + ux * offset, p2[1] + uy * offset];
+  }
+
+  const pts = `${p1[0]},${p1[1]} ${p2[0]},${p2[1]}`;
+  let s = `<polyline class="erd-edge" points="${pts}" fill="none" stroke="#334155" stroke-width="1.6" marker-end="url(#fkArrow)"/>`;
+  s += `<circle cx="${p1[0]}" cy="${p1[1]}" r="3" fill="#334155"/>`;
+  return s;
+}
+
+function noteH(n) { return 34 + n.lines.length * 13 + 8; }
+function svgNote(n) {
+  const h = noteH(n), f = 14;
+  let o = `<path d="M${n.x},${n.y} H${n.x + n.w - f} L${n.x + n.w},${n.y + f} V${n.y + h} H${n.x} Z" fill="#fffbeb" stroke="#94a3b8" stroke-width="1.2"/>`;
+  o += `<path d="M${n.x + n.w - f},${n.y} V${n.y + f} H${n.x + n.w}" fill="none" stroke="#94a3b8" stroke-width="1.2"/>`;
+  o += `<text x="${n.x + 12}" y="${n.y + 20}" fill="#1e293b" font-size="11" font-weight="700" ${FM}>${escXml(n.title)}</text>`;
+  n.lines.forEach((l, i) => {
+    o += `<text x="${n.x + 12}" y="${n.y + 38 + i * 13}" fill="#334155" font-size="9.5" ${FM} xml:space="preserve">${escXml(l)}</text>`;
+  });
+  return o;
+}
+
+// ── Hover highlight ─────────────────────────────────────────────────────────
+function wireHover(svg) {
+  svg.querySelectorAll('.erd-edge').forEach(function (line) {
+    const hit = line.cloneNode(false);
+    hit.removeAttribute('marker-end');
+    hit.removeAttribute('class');
+    hit.setAttribute('stroke', 'transparent');
+    hit.setAttribute('stroke-width', '16');
+    hit.setAttribute('fill', 'none');
+    hit.style.pointerEvents = 'stroke';
+    hit.style.cursor = 'pointer';
+    line.parentNode.insertBefore(hit, line.nextSibling);
+    const s0 = line.getAttribute('stroke');
+    const w0 = line.getAttribute('stroke-width');
+    let slot = null;
+    hit.addEventListener('mouseenter', function () {
+      slot = document.createComment('e'); hit.parentNode.insertBefore(slot, hit);
+      const p = hit.parentNode; p.appendChild(line); p.appendChild(hit);
+      line.setAttribute('stroke', '#e6007e');
+      line.setAttribute('stroke-width', String(Math.max(3.4, parseFloat(w0 || '1.6') + 1.6)));
+    });
+    hit.addEventListener('mouseleave', function () {
+      line.setAttribute('stroke', s0); if (w0) line.setAttribute('stroke-width', w0);
+      if (slot && slot.parentNode) {
+        slot.parentNode.insertBefore(line, slot);
+        slot.parentNode.insertBefore(hit, slot);
+        slot.remove();
+      }
+      slot = null;
+    });
+  });
+}
+
+function render() {
+  let maxX = 600, maxY = 400;
+  for (const t of TABLES) {
+    maxX = Math.max(maxX, t.x + boxW(t) + 60);
+    maxY = Math.max(maxY, t.y + boxH(t) + 60);
+  }
+  for (const n of NOTES) { maxX = Math.max(maxX, n.x + n.w + 30); maxY = Math.max(maxY, n.y + noteH(n) + 96); }
+
+  const defs = `<defs>
+    <pattern id="dotgrid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="12" cy="12" r="0.8" fill="#cbd5e1"/>
+    </pattern>
+    <marker id="fkArrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polyline points="0,0 9,4 0,8" fill="none" stroke="#334155" stroke-width="1.5"/>
+    </marker>
+  </defs>`;
+
+  const W = maxX, H = maxY;
+  const bg = `<rect width="${W}" height="${H}" fill="#ffffff"/><rect width="${W}" height="${H}" fill="url(#dotgrid)"/>`;
+  const rels = FKS.map(svgRel).join('');
+  const boxes = TABLES.map(svgBox).join('');
+  const notes = NOTES.map(svgNote).join('');
+
+  const legendLine1 = 'Line with arrowhead = FOREIGN KEY, dot at the many/child end, arrow at the referenced (one/parent) end  |  underline = PRIMARY KEY  |  orange italic "FK ..." = foreign key column  |  "{CHECK}" = enumeration enforced by a CHECK constraint';
+  const legendLine2 = 'Blue header = ordinary table   Purple header «table-per-subclass» = subclass table (PK is also its FK to the base table)   Teal header «join / link table» = association/link table with its own surrogate PK';
+  const legend = `<text x="16" y="${H - 64}" fill="#475569" font-size="9.5" font-weight="700" ${FM}>${legendLine1}</text>`
+    + `<text x="16" y="${H - 48}" fill="#64748b" font-size="9" ${FM}>${legendLine2}</text>`;
+
+  const svg = document.getElementById('diagram-svg');
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = defs + bg + rels + boxes + notes + legend;
+  wireHover(svg);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(render);
+});
+  </script>
+</body>
+</html>
