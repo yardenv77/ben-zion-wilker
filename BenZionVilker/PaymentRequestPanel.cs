@@ -43,7 +43,7 @@ namespace BenZionVilker
             {
                 dt.Rows.Add(pr.getPaymentRequestId(), pr.getProject().getName(), pr.getAmount(), pr.getSubmissionDate(),
                     pr.getApprovalDate().HasValue ? pr.getApprovalDate().Value.ToString("yyyy-MM-dd") : "",
-                    pr.getStatus().ToString(), string.Join(", ", pr.getMissingDocuments()));
+                    pr.getStatus().ToString(), EnumDisplay.Hebrew(pr.getMissingDocuments()));
             }
 
             dataGridView_paymentRequests.DataSource = dt;
@@ -73,7 +73,7 @@ namespace BenZionVilker
             textBox_submissionDate.Text = selectedPaymentRequest.getSubmissionDate().ToString("yyyy-MM-dd");
             textBox_approvalDate.Text = selectedPaymentRequest.getApprovalDate().HasValue ? selectedPaymentRequest.getApprovalDate().Value.ToString("yyyy-MM-dd") : "";
             comboBox_status.Text = selectedPaymentRequest.getStatus().ToString();
-            textBox_missingDocuments.Text = string.Join(", ", selectedPaymentRequest.getMissingDocuments());
+            textBox_missingDocuments.Text = EnumDisplay.Hebrew(selectedPaymentRequest.getMissingDocuments());
         }
 
         private bool validateFields()

@@ -25,5 +25,25 @@ namespace BenZionVilker
                 default: return status.ToString();
             }
         }
+
+        public static string Hebrew(DocumentType type)
+        {
+            switch (type)
+            {
+                case DocumentType.Invoice: return "חשבונית";
+                case DocumentType.QuantityStatement: return "דוח כמויות";
+                case DocumentType.SupervisorApproval: return "אישור מפקח";
+                case DocumentType.SiteDiaryExtract: return "תמצית יומן אתר";
+                case DocumentType.InsuranceCertificate: return "אישור ביטוח";
+                default: return type.ToString();
+            }
+        }
+
+        // "אישור מפקח, אישור ביטוח" -- or "אין" when nothing is missing, rather than an empty cell
+        public static string Hebrew(System.Collections.Generic.List<DocumentType> types)
+        {
+            if (types.Count == 0) return "אין";
+            return string.Join(", ", types.ConvertAll(Hebrew));
+        }
     }
 }
