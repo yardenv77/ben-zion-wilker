@@ -225,6 +225,14 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין מספר הזמנה", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
+            foreach (PurchaseOrder po in Program.PurchaseOrders)
+            {
+                if (po != selectedPurchaseOrder && po.getPoNumber() == textBox_poNumber.Text)
+                {
+                    MessageBox.Show("קיימת כבר הזמנת רכש עם מספר זה", "שגיאה", MessageBoxButtons.OK);
+                    return false;
+                }
+            }
             if (string.IsNullOrWhiteSpace(comboBox_supplier.Text))
             {
                 MessageBox.Show("יש לבחור ספק", "שגיאה", MessageBoxButtons.OK);
@@ -245,14 +253,14 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין תאריך הזמנה תקין (yyyy-MM-dd)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!decimal.TryParse(textBox_totalAmount.Text, out _))
+            if (!decimal.TryParse(textBox_totalAmount.Text, out decimal totalAmount) || totalAmount <= 0)
             {
-                MessageBox.Show("יש להזין סכום כולל תקין", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין סכום כולל תקין (גדול מ-0)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!decimal.TryParse(textBox_vatAmount.Text, out _))
+            if (!decimal.TryParse(textBox_vatAmount.Text, out decimal vatAmount) || vatAmount < 0)
             {
-                MessageBox.Show("יש להזין סכום מע\"מ תקין", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין סכום מע\"מ תקין (לא שלילי)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
             return true;

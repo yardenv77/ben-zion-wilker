@@ -93,14 +93,14 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין יחידת מידה", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!double.TryParse(textBox_quantity.Text, out _))
+            if (!double.TryParse(textBox_quantity.Text, out double quantity) || quantity <= 0)
             {
-                MessageBox.Show("יש להזין כמות תקינה", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין כמות תקינה (גדולה מ-0)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!decimal.TryParse(textBox_unitPrice.Text, out _))
+            if (!decimal.TryParse(textBox_unitPrice.Text, out decimal unitPrice) || unitPrice < 0)
             {
-                MessageBox.Show("יש להזין מחיר יחידה תקין", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין מחיר יחידה תקין (לא שלילי)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
             return true;

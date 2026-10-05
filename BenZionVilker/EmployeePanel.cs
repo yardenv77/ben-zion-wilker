@@ -97,9 +97,9 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין תעודת זהות", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!decimal.TryParse(textBox_dailyRate.Text, out _))
+            if (!decimal.TryParse(textBox_dailyRate.Text, out decimal dailyRate) || dailyRate <= 0)
             {
-                MessageBox.Show("יש להזין תעריף יומי תקין", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין תעריף יומי תקין (גדול מ-0)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
             if (string.IsNullOrWhiteSpace(textBox_certificationNo.Text))

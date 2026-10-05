@@ -154,9 +154,9 @@ namespace BenZionVilker
                 MessageBox.Show("יש לבחור פרויקט", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!decimal.TryParse(textBox_amount.Text, out _))
+            if (!decimal.TryParse(textBox_amount.Text, out decimal amount) || amount <= 0)
             {
-                MessageBox.Show("יש להזין סכום תקין", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין סכום תקין (גדול מ-0)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
             if (!DateTime.TryParse(textBox_issueDate.Text, out _))
@@ -181,6 +181,14 @@ namespace BenZionVilker
                     MessageBox.Show("יש להזין שם בנק ומספר ערבות", "שגיאה", MessageBoxButtons.OK);
                     return false;
                 }
+                foreach (FinancialSecurity fs in Program.FinancialSecurities)
+                {
+                    if (fs != selectedSecurity && fs is BankGuarantee bg && bg.getGuaranteeNumber() == textBox_guaranteeNumber.Text)
+                    {
+                        MessageBox.Show("קיימת כבר ערבות עם מספר זה", "שגיאה", MessageBoxButtons.OK);
+                        return false;
+                    }
+                }
             }
             else
             {
@@ -188,6 +196,14 @@ namespace BenZionVilker
                 {
                     MessageBox.Show("יש להזין מבטח, מספר פוליסה וסוג כיסוי", "שגיאה", MessageBoxButtons.OK);
                     return false;
+                }
+                foreach (FinancialSecurity fs in Program.FinancialSecurities)
+                {
+                    if (fs != selectedSecurity && fs is InsurancePolicy ip && ip.getPolicyNumber() == textBox_policyNumber.Text)
+                    {
+                        MessageBox.Show("קיימת כבר פוליסה עם מספר זה", "שגיאה", MessageBoxButtons.OK);
+                        return false;
+                    }
                 }
             }
             return true;

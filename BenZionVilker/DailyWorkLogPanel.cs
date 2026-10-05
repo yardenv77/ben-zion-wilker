@@ -95,14 +95,14 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין תאריך יומן תקין (yyyy-MM-dd)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!double.TryParse(textBox_plannedQuantity.Text, out _))
+            if (!double.TryParse(textBox_plannedQuantity.Text, out double plannedQuantity) || plannedQuantity < 0)
             {
-                MessageBox.Show("יש להזין כמות מתוכננת תקינה", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין כמות מתוכננת תקינה (לא שלילית)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!double.TryParse(textBox_completedQuantity.Text, out _))
+            if (!double.TryParse(textBox_completedQuantity.Text, out double completedQuantity) || completedQuantity < 0)
             {
-                MessageBox.Show("יש להזין כמות שבוצעה תקינה", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין כמות שבוצעה תקינה (לא שלילית)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
             if (comboBox_submittedBy.SelectedIndex < 0 && string.IsNullOrWhiteSpace(comboBox_submittedBy.Text))

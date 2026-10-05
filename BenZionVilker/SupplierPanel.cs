@@ -86,19 +86,27 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין מספר ח.פ.", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
+            foreach (BusinessPartner bp in Program.BusinessPartners)
+            {
+                if (bp != selectedSupplier && bp.getCompanyRegistrationNo() == textBox_companyRegistrationNo.Text)
+                {
+                    MessageBox.Show("קיים כבר שותף עסקי עם מספר ח.פ. זה", "שגיאה", MessageBoxButtons.OK);
+                    return false;
+                }
+            }
             if (string.IsNullOrWhiteSpace(textBox_contactPerson.Text))
             {
                 MessageBox.Show("יש להזין איש קשר", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (string.IsNullOrWhiteSpace(textBox_phone.Text))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(textBox_phone.Text, @"^\d{9,10}$"))
             {
-                MessageBox.Show("יש להזין טלפון", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין טלפון תקין (9-10 ספרות)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (string.IsNullOrWhiteSpace(textBox_email.Text))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(textBox_email.Text, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
             {
-                MessageBox.Show("יש להזין דוא\"ל", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש להזין דוא\"ל תקין", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
             if (!double.TryParse(textBox_rating.Text, out double rating))
