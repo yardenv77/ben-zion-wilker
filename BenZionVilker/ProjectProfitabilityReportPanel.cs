@@ -320,6 +320,55 @@ namespace BenZionVilker
             }
         }
 
+        // UC-05.Extend "Export Report to PDF": runs only when the user asks for it, after a
+        // report was generated. Saved straight to Documents (no Save dialog -- single-window
+        // rule), two pages: profitability, then the monthly cash flow.
+        private void button_exportPdf_Click(object sender, EventArgs e)
+        {
+            if (dataGridView_report.DataSource == null)
+            {
+                MessageBox.Show("יש להפיק דוח לפני הייצוא", "שגיאה", MessageBoxButtons.OK);
+                return;
+            }
+
+            string folder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string path = System.IO.Path.Combine(folder, "דוח_רווחיות_ותזרים_" + DateTime.Now.ToString("yyyy-MM-dd_HHmm") + ".pdf");
+
+            // The buttons are not part of the report itself
+            Button[] buttons = { button_generate, button_exportPdf, button_back };
+            foreach (Button b in buttons) b.Visible = false;
+            Bitmap screen = new Bitmap(this.Width, this.Height);
+            this.DrawToBitmap(screen, new Rectangle(0, 0, this.Width, this.Height));
+            foreach (Button b in buttons) b.Visible = true;
+
+            // Page break between the two parts: below the profitability chart's card
+            int split = panel_chart.Parent.Bottom + 10;
+            int end = Math.Min(this.Height, panel_cashFlowChart.Parent.Bottom + 16);
+            List<Bitmap> pages = new List<Bitmap>
+            {
+                screen.Clone(new Rectangle(0, 0, this.Width, split), screen.PixelFormat),
+                screen.Clone(new Rectangle(0, split, this.Width, end - split), screen.PixelFormat)
+            };
+            screen.Dispose();
+
+            try
+            {
+                PdfExport.SaveImagesAsPdf(pages, path);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("שמירת קובץ ה-PDF נכשלה: " + ex.Message, "שגיאה", MessageBoxButtons.OK);
+                return;
+            }
+            finally
+            {
+                foreach (Bitmap p in pages) p.Dispose();
+            }
+
+            MessageBox.Show("הדוח יוצא לקובץ PDF:\n" + path, "הודעה", MessageBoxButtons.OK, MessageBoxIcon.None,
+                MessageBoxDefaultButton.Button1, MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign);
+        }
+
         private int resolveSelectedProjectId()
         {
             return int.Parse(comboBox_project.Text.Split(new[] { " - " }, StringSplitOptions.None)[0]);

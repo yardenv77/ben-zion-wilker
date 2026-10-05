@@ -22,6 +22,7 @@ namespace BenZionVilker
             this.label_project = new System.Windows.Forms.Label();
             this.comboBox_project = new System.Windows.Forms.ComboBox();
             this.button_generate = new System.Windows.Forms.Button();
+            this.button_exportPdf = new System.Windows.Forms.Button();
             this.panel_kpiRevenue = new BenZionVilker.RoundedPanel();
             this.label_kpiRevenueValue = new System.Windows.Forms.Label();
             this.label_kpiRevenueCaption = new System.Windows.Forms.Label();
@@ -121,6 +122,19 @@ namespace BenZionVilker
             this.button_generate.Text = "הפק דוח";
             this.button_generate.UseVisualStyleBackColor = true;
             this.button_generate.Click += new System.EventHandler(this.button_generate_Click);
+            //
+            // button_exportPdf -- UC-05.Extend "Export Report to PDF" (docs/00e-use-cases.md):
+            // only meaningful once a report was generated, checked in the click handler
+            //
+            this.button_exportPdf.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.button_exportPdf.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.button_exportPdf.Location = new System.Drawing.Point(280, 190);
+            this.button_exportPdf.Name = "button_exportPdf";
+            this.button_exportPdf.Size = new System.Drawing.Size(250, 42);
+            this.button_exportPdf.TabIndex = 17;
+            this.button_exportPdf.Text = "ייצוא ל-PDF";
+            this.button_exportPdf.UseVisualStyleBackColor = true;
+            this.button_exportPdf.Click += new System.EventHandler(this.button_exportPdf_Click);
             //
             // KPI summary cards (course step 10.2/10.4 reference: colored rounded tiles for
             // a headline number). Populated in button_generate_Click; start empty/"--" so an
@@ -289,6 +303,7 @@ namespace BenZionVilker
             this.Controls.Add(this.panel_kpiProfit);
             this.Controls.Add(this.panel_kpiCost);
             this.Controls.Add(this.panel_kpiRevenue);
+            this.Controls.Add(this.button_exportPdf);
             this.Controls.Add(this.button_generate);
             this.Controls.Add(this.comboBox_project);
             this.Controls.Add(this.label_project);
@@ -316,6 +331,7 @@ namespace BenZionVilker
         private System.Windows.Forms.Label label_project;
         private System.Windows.Forms.ComboBox comboBox_project;
         private System.Windows.Forms.Button button_generate;
+        private System.Windows.Forms.Button button_exportPdf;
         private BenZionVilker.RoundedPanel panel_kpiRevenue;
         private System.Windows.Forms.Label label_kpiRevenueValue;
         private System.Windows.Forms.Label label_kpiRevenueCaption;
