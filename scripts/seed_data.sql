@@ -290,20 +290,26 @@ INSERT INTO PurchaseOrderLine (purchase_order_line_id, purchase_order_id, descri
 (16, 10, N'ברזל זיון 10 מ"מ', N'טון', 8, 4150.00, 0);
 GO
 
--- SupplierPayment (10) -- business_partner_id references the BusinessPartner superclass;
+-- SupplierPayment (14) -- business_partner_id references the BusinessPartner superclass;
 -- invoiceNumber is a genuine business identifier (the supplier invoice number); covers
--- all SupplierPaymentStatus values.
-INSERT INTO SupplierPayment (supplier_payment_id, invoiceNumber, business_partner_id, amount, dueDate, paidDate, status) VALUES
-(1, N'INV-4471', 1, 180000.00, '2025-10-15', '2025-10-14', N'Paid'),
-(2, N'INV-4488', 2, 95000.00, '2025-11-01', NULL, N'Pending'),
-(3, N'INV-4502', 5, 384000.00, '2026-02-01', NULL, N'Overdue'),
-(4, N'INV-4519', 6, 280000.00, '2026-03-01', '2026-02-25', N'Paid'),
-(5, N'INV-4527', 4, 64000.00, '2025-12-05', NULL, N'Overdue'),
-(6, N'INV-4533', 3, 45000.00, '2025-09-20', '2025-09-19', N'Paid'),
-(7, N'INV-4548', 8, 96000.00, '2026-04-01', NULL, N'Pending'),
-(8, N'INV-4551', 2, 310000.00, '2026-04-15', NULL, N'Pending'),
-(9, N'INV-4563', 7, 52000.00, '2025-08-10', NULL, N'Overdue'),
-(10, N'INV-4579', 1, 128000.00, '2026-05-01', NULL, N'Pending');
+-- all SupplierPaymentStatus values. project_id: a supplier's payment goes to the project of
+-- the order it pays for; a subcontractor's to the project matching its trade. Rows 11-14
+-- are further paid invoices, so UC-05's monthly cash flow has real cash out to show.
+INSERT INTO SupplierPayment (supplier_payment_id, invoiceNumber, business_partner_id, project_id, amount, dueDate, paidDate, status) VALUES
+(1, N'INV-4471', 1, 1, 180000.00, '2025-10-15', '2025-10-14', N'Paid'),
+(2, N'INV-4488', 2, 2, 95000.00, '2025-11-01', NULL, N'Pending'),
+(3, N'INV-4502', 5, 3, 384000.00, '2026-02-01', NULL, N'Overdue'),
+(4, N'INV-4519', 6, 1, 280000.00, '2026-03-01', '2026-02-25', N'Paid'),
+(5, N'INV-4527', 4, 4, 64000.00, '2025-12-05', NULL, N'Overdue'),
+(6, N'INV-4533', 3, 3, 45000.00, '2025-09-20', '2025-09-19', N'Paid'),
+(7, N'INV-4548', 8, 6, 96000.00, '2026-04-01', NULL, N'Pending'),
+(8, N'INV-4551', 2, 2, 310000.00, '2026-04-15', NULL, N'Pending'),
+(9, N'INV-4563', 7, 2, 52000.00, '2025-08-10', NULL, N'Overdue'),
+(10, N'INV-4579', 1, 1, 128000.00, '2026-05-01', NULL, N'Pending'),
+(11, N'INV-4584', 5, 3, 210000.00, '2025-11-30', '2025-11-28', N'Paid'),
+(12, N'INV-4590', 4, 4, 43009.20, '2026-01-15', '2026-01-12', N'Paid'),
+(13, N'INV-4596', 6, 3, 165000.00, '2026-01-31', '2026-01-29', N'Paid'),
+(14, N'INV-4602', 8, 6, 48000.00, '2026-03-31', '2026-03-30', N'Paid');
 GO
 
 -- ============================================================================

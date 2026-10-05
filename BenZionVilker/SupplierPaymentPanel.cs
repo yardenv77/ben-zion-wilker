@@ -22,6 +22,8 @@ namespace BenZionVilker
 
             foreach (BusinessPartner bp in Program.BusinessPartners)
                 comboBox_businessPartner.Items.Add(bp.getBusinessPartnerId() + " - " + bp.getName());
+            foreach (Project p in Program.Projects)
+                comboBox_project.Items.Add(p.getProjectId() + " - " + p.getName());
             foreach (SupplierPaymentStatus s in Enum.GetValues(typeof(SupplierPaymentStatus)))
                 comboBox_status.Items.Add(s.ToString());
             comboBox_status.SelectedIndex = 0;
@@ -35,6 +37,7 @@ namespace BenZionVilker
             dt.Columns.Add("supplierPaymentId", typeof(int));
             dt.Columns.Add("invoiceNumber", typeof(string));
             dt.Columns.Add("businessPartner", typeof(string));
+            dt.Columns.Add("project", typeof(string));
             dt.Columns.Add("amount", typeof(decimal));
             dt.Columns.Add("dueDate", typeof(DateTime));
             dt.Columns.Add("paidDate", typeof(string));
@@ -42,7 +45,7 @@ namespace BenZionVilker
 
             foreach (SupplierPayment sp in Program.SupplierPayments)
             {
-                dt.Rows.Add(sp.getSupplierPaymentId(), sp.getInvoiceNumber(), sp.getBusinessPartner().getName(), sp.getAmount(), sp.getDueDate(),
+                dt.Rows.Add(sp.getSupplierPaymentId(), sp.getInvoiceNumber(), sp.getBusinessPartner().getName(), sp.getProject().getName(), sp.getAmount(), sp.getDueDate(),
                     sp.getPaidDate().HasValue ? sp.getPaidDate().Value.ToString("yyyy-MM-dd") : "", sp.getStatus().ToString());
             }
 
@@ -53,6 +56,7 @@ namespace BenZionVilker
             dataGridView_supplierPayments.Columns["supplierPaymentId"].HeaderText = "מס'";
             dataGridView_supplierPayments.Columns["invoiceNumber"].HeaderText = "מס' חשבונית";
             dataGridView_supplierPayments.Columns["businessPartner"].HeaderText = "ספק/קבלן משנה";
+            dataGridView_supplierPayments.Columns["project"].HeaderText = "פרויקט";
             dataGridView_supplierPayments.Columns["amount"].HeaderText = "סכום";
             dataGridView_supplierPayments.Columns["dueDate"].HeaderText = "תאריך פירעון";
             dataGridView_supplierPayments.Columns["paidDate"].HeaderText = "תאריך תשלום";
@@ -74,6 +78,7 @@ namespace BenZionVilker
             textBox_dueDate.Text = selectedSupplierPayment.getDueDate().ToString("yyyy-MM-dd");
             textBox_paidDate.Text = selectedSupplierPayment.getPaidDate().HasValue ? selectedSupplierPayment.getPaidDate().Value.ToString("yyyy-MM-dd") : "";
             comboBox_status.Text = selectedSupplierPayment.getStatus().ToString();
+            comboBox_project.Text = selectedSupplierPayment.getProject().getProjectId() + " - " + selectedSupplierPayment.getProject().getName();
         }
 
         private bool validateFields()
@@ -88,9 +93,14 @@ namespace BenZionVilker
                 MessageBox.Show("יש לבחור ספק/קבלן משנה", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (!decimal.TryParse(textBox_amount.Text, out _))
+            if (comboBox_project.SelectedIndex < 0)
             {
-                MessageBox.Show("יש להזין סכום תקין", "שגיאה", MessageBoxButtons.OK);
+                MessageBox.Show("יש לבחור פרויקט", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            if (!decimal.TryParse(textBox_amount.Text, out decimal amount) || amount <= 0)
+            {
+                MessageBox.Show("יש להזין סכום תקין (גדול מ-0)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
             if (!DateTime.TryParse(textBox_dueDate.Text, out _))
@@ -103,6 +113,18 @@ namespace BenZionVilker
                 MessageBox.Show("תאריך תשלום אינו תקין (yyyy-MM-dd)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
+            // A Paid payment needs its payment date: UC-05's monthly cash flow places it by that date
+            bool isPaid = comboBox_status.Text == SupplierPaymentStatus.Paid.ToString();
+            if (isPaid && string.IsNullOrWhiteSpace(textBox_paidDate.Text))
+            {
+                MessageBox.Show("תשלום בסטטוס Paid חייב תאריך תשלום", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
+            if (!isPaid && !string.IsNullOrWhiteSpace(textBox_paidDate.Text))
+            {
+                MessageBox.Show("תאריך תשלום מוזן רק לתשלום בסטטוס Paid", "שגיאה", MessageBoxButtons.OK);
+                return false;
+            }
             return true;
         }
 
@@ -112,6 +134,12 @@ namespace BenZionVilker
             return BusinessPartner.seekBusinessPartner(id);
         }
 
+        private Project resolveSelectedProject()
+        {
+            int id = int.Parse(comboBox_project.Text.Split(new[] { " - " }, StringSplitOptions.None)[0]);
+            return Project.seekProject(id);
+        }
+
         private void clearForm()
         {
             selectedSupplierPayment = null;
@@ -119,6 +147,7 @@ namespace BenZionVilker
             textBox_invoiceNumber.Text = "";
             comboBox_businessPartner.SelectedIndex = -1;
             comboBox_businessPartner.Text = "";
+            comboBox_project.SelectedIndex = -1;
             textBox_amount.Text = "";
             textBox_dueDate.Text = "";
             textBox_paidDate.Text = "";
@@ -133,7 +162,7 @@ namespace BenZionVilker
             SupplierPaymentStatus status = (SupplierPaymentStatus)Enum.Parse(typeof(SupplierPaymentStatus), comboBox_status.Text);
             DateTime? paidDate = string.IsNullOrWhiteSpace(textBox_paidDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_paidDate.Text);
 
-            SupplierPayment supplierPayment = new SupplierPayment(id, textBox_invoiceNumber.Text, resolveSelectedBusinessPartner(), decimal.Parse(textBox_amount.Text),
+            SupplierPayment supplierPayment = new SupplierPayment(id, textBox_invoiceNumber.Text, resolveSelectedBusinessPartner(), resolveSelectedProject(), decimal.Parse(textBox_amount.Text),
                 DateTime.Parse(textBox_dueDate.Text), paidDate, status, true);
 
             if (!Program.SupplierPayments.Contains(supplierPayment)) return;
@@ -154,6 +183,7 @@ namespace BenZionVilker
 
             selectedSupplierPayment.setInvoiceNumber(textBox_invoiceNumber.Text);
             selectedSupplierPayment.setBusinessPartner(resolveSelectedBusinessPartner());
+            selectedSupplierPayment.setProject(resolveSelectedProject());
             selectedSupplierPayment.setAmount(decimal.Parse(textBox_amount.Text));
             selectedSupplierPayment.setDueDate(DateTime.Parse(textBox_dueDate.Text));
             selectedSupplierPayment.setPaidDate(string.IsNullOrWhiteSpace(textBox_paidDate.Text) ? (DateTime?)null : DateTime.Parse(textBox_paidDate.Text));

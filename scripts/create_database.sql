@@ -296,13 +296,19 @@ CREATE TABLE SupplierPayment (
     -- References the superclass BusinessPartner, not Supplier/Subcontractor directly
     -- (docs/design/class-diagram.md Section 5 model assumption).
     business_partner_id INT NOT NULL,
+    -- Relationship "Project 1 -- 0..* SupplierPayment": which project the paid work or
+    -- material was for. Needed by UC-05's monthly cash flow to filter cash out by project
+    -- (added during implementation; see design/class-diagram.md Section 5).
+    project_id INT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     dueDate DATETIME2 NOT NULL,
     paidDate DATETIME2 NULL, -- nullable: not yet set while status is Pending/Overdue
     status NVARCHAR(20) NOT NULL,
     CONSTRAINT CK_SupplierPayment_Status CHECK (status IN (N'Pending', N'Paid', N'Overdue')),
     CONSTRAINT FK_SupplierPayment_BusinessPartner FOREIGN KEY (business_partner_id)
-        REFERENCES BusinessPartner(business_partner_id) ON DELETE NO ACTION ON UPDATE NO ACTION
+        REFERENCES BusinessPartner(business_partner_id) ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT FK_SupplierPayment_Project FOREIGN KEY (project_id)
+        REFERENCES Project(project_id) ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 GO
 

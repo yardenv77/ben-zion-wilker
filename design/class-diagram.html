@@ -184,7 +184,7 @@ const CLASSES = [
   { id: 'DocumentType', name: 'DocumentType', stereotype: '«enumeration»', isEnum: true, isExternal: false, isAbstract: false,
     attrs: ['Invoice', 'QuantityStatement', 'SupervisorApproval', 'SiteDiaryExtract', 'InsuranceCertificate'], ops: [],
     x: 1990, y: 1700 },
-  { id: 'SupplierPayment', name: 'SupplierPayment', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: false,
+  { id: 'SupplierPayment', name: 'SupplierPayment', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,
     attrs: ['- invoiceNumber : String', '- amount : Money', '- dueDate : Date', '- paidDate : Date', '- status : SupplierPaymentStatus'],
     ops: ['+ isOverdue() : Boolean', '+ getDaysOverdue() : Integer'],
     x: 1320, y: 1920 },
@@ -273,7 +273,10 @@ const RELS = [
   { id: 'd1', type: 'comp', from: 'PaymentRequest', to: 'SubmittedDocument', fromMult: '1', toMult: '0..*',
     points: [[1500,1839], [1500,1880], [1860,1880], [1860,1768]] },
   { id: 'r24', type: 'assoc', from: 'BusinessPartner', to: 'SupplierPayment', fromMult: '1', toMult: '0..*',
-    points: [[1320,171], [1240,171], [1240,1980], [1320,1980]] }
+    points: [[1320,171], [1240,171], [1240,1980], [1320,1980]] },
+  // added during implementation: UC-05's monthly cash flow filters cash out by project
+  { id: 'r25', type: 'assoc', from: 'Project', to: 'SupplierPayment', fromMult: '1', toMult: '0..*',
+    points: [[1045,261], [1045,2040], [1320,2040]] }
 ];
 
 const NOTES = [
@@ -650,7 +653,8 @@ const diagramModel = {
     'DailyWorkLog.status uses the WorkLogStatus enumeration (Submitted / UnderReview).',
     'Attendance stores startTime / endTime; hoursWorked() is derived, with the constraint {endTime > startTime}.',
     'Client is linked to Project only through Tender (Client 1--0..* Tender, Tender 1--0..1 Project), to avoid a redundant second path.',
-    'Subcontractor – DailyWorkLog is optional (0..1 on the Subcontractor side): a log may cover only the company\'s own crew.'
+    'Subcontractor – DailyWorkLog is optional (0..1 on the Subcontractor side): a log may cover only the company\'s own crew.',
+    'Project – SupplierPayment (added during implementation): UC-05\'s monthly cash flow counts paid supplier payments as cash out and filters them by project; the paid partner alone (BusinessPartner – SupplierPayment) does not say which project the work or material was for.'
   ],
   openQuestions: []
 };

@@ -30,6 +30,8 @@ namespace BenZionVilker
             this.textBox_paidDate = new System.Windows.Forms.TextBox();
             this.label_status = new System.Windows.Forms.Label();
             this.comboBox_status = new System.Windows.Forms.ComboBox();
+            this.label_project = new System.Windows.Forms.Label();
+            this.comboBox_project = new System.Windows.Forms.ComboBox();
             this.button_save = new System.Windows.Forms.Button();
             this.button_update = new System.Windows.Forms.Button();
             this.button_delete = new System.Windows.Forms.Button();
@@ -192,6 +194,26 @@ namespace BenZionVilker
             this.comboBox_status.Size = new System.Drawing.Size(250, 25);
             this.comboBox_status.TabIndex = 15;
             //
+            // label_project
+            //
+            this.label_project.AutoSize = true;
+            this.label_project.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.label_project.Location = new System.Drawing.Point(820, 505);
+            this.label_project.Name = "label_project";
+            this.label_project.Size = new System.Drawing.Size(48, 17);
+            this.label_project.TabIndex = 21;
+            this.label_project.Text = "פרויקט";
+            //
+            // comboBox_project -- relationship "Project 1 -- 0..* SupplierPayment" (UC-05 cash flow)
+            //
+            this.comboBox_project.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBox_project.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.comboBox_project.FormattingEnabled = true;
+            this.comboBox_project.Location = new System.Drawing.Point(550, 502);
+            this.comboBox_project.Name = "comboBox_project";
+            this.comboBox_project.Size = new System.Drawing.Size(250, 25);
+            this.comboBox_project.TabIndex = 16;
+            //
             // button_save
             //
             this.button_save.Cursor = System.Windows.Forms.Cursors.Hand;
@@ -199,7 +221,7 @@ namespace BenZionVilker
             this.button_save.Location = new System.Drawing.Point(750, 560);
             this.button_save.Name = "button_save";
             this.button_save.Size = new System.Drawing.Size(110, 42);
-            this.button_save.TabIndex = 16;
+            this.button_save.TabIndex = 17;
             this.button_save.Text = "שמירה";
             this.button_save.UseVisualStyleBackColor = true;
             this.button_save.Click += new System.EventHandler(this.button_save_Click);
@@ -211,7 +233,7 @@ namespace BenZionVilker
             this.button_update.Location = new System.Drawing.Point(610, 560);
             this.button_update.Name = "button_update";
             this.button_update.Size = new System.Drawing.Size(110, 42);
-            this.button_update.TabIndex = 17;
+            this.button_update.TabIndex = 18;
             this.button_update.Text = "עדכון";
             this.button_update.UseVisualStyleBackColor = true;
             this.button_update.Click += new System.EventHandler(this.button_update_Click);
@@ -223,7 +245,7 @@ namespace BenZionVilker
             this.button_delete.Location = new System.Drawing.Point(470, 560);
             this.button_delete.Name = "button_delete";
             this.button_delete.Size = new System.Drawing.Size(110, 42);
-            this.button_delete.TabIndex = 18;
+            this.button_delete.TabIndex = 19;
             this.button_delete.Text = "מחיקה";
             this.button_delete.UseVisualStyleBackColor = true;
             this.button_delete.Click += new System.EventHandler(this.button_delete_Click);
@@ -235,7 +257,7 @@ namespace BenZionVilker
             this.button_back.Location = new System.Drawing.Point(330, 560);
             this.button_back.Name = "button_back";
             this.button_back.Size = new System.Drawing.Size(110, 42);
-            this.button_back.TabIndex = 19;
+            this.button_back.TabIndex = 20;
             this.button_back.Text = "חזרה";
             this.button_back.UseVisualStyleBackColor = true;
             this.button_back.Click += new System.EventHandler(this.button_back_Click);
@@ -248,6 +270,8 @@ namespace BenZionVilker
             this.Controls.Add(this.button_delete);
             this.Controls.Add(this.button_update);
             this.Controls.Add(this.button_save);
+            this.Controls.Add(this.comboBox_project);
+            this.Controls.Add(this.label_project);
             this.Controls.Add(this.comboBox_status);
             this.Controls.Add(this.label_status);
             this.Controls.Add(this.textBox_paidDate);
@@ -290,6 +314,8 @@ namespace BenZionVilker
         private System.Windows.Forms.TextBox textBox_paidDate;
         private System.Windows.Forms.Label label_status;
         private System.Windows.Forms.ComboBox comboBox_status;
+        private System.Windows.Forms.Label label_project;
+        private System.Windows.Forms.ComboBox comboBox_project;
         private System.Windows.Forms.Button button_save;
         private System.Windows.Forms.Button button_update;
         private System.Windows.Forms.Button button_delete;

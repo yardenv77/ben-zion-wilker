@@ -69,7 +69,7 @@ const TABLES = [
   { id: 'BudgetLine', name: 'BudgetLine', kind: 'base', x: 490, y: 840,
     attrs: ['PK budget_line_id : INT', 'FK project_id : INT', 'category : NVARCHAR(50)', 'plannedAmount : DECIMAL(10,2)', 'actualAmount : DECIMAL(10,2)'] },
   { id: 'SupplierPayment', name: 'SupplierPayment', kind: 'base', x: 940, y: 840,
-    attrs: ['PK supplier_payment_id : INT', 'invoiceNumber : NVARCHAR(50)', 'FK business_partner_id : INT', 'amount : DECIMAL(10,2)', 'dueDate : DATETIME2', 'paidDate : DATETIME2 NULL', 'status : NVARCHAR(20) {CHECK}'] },
+    attrs: ['PK supplier_payment_id : INT', 'invoiceNumber : NVARCHAR(50)', 'FK business_partner_id : INT', 'FK project_id : INT', 'amount : DECIMAL(10,2)', 'dueDate : DATETIME2', 'paidDate : DATETIME2 NULL', 'status : NVARCHAR(20) {CHECK}'] },
   { id: 'FinancialSecurity', name: 'FinancialSecurity', kind: 'base', x: 1390, y: 840,
     attrs: ['PK financial_security_id : INT', 'FK project_id : INT', 'amount : DECIMAL(10,2)', 'issueDate : DATETIME2', 'expiryDate : DATETIME2', 'status : NVARCHAR(20) {CHECK}'] },
 
@@ -121,6 +121,7 @@ const FKS = [
   { id: 'fk19', from: 'PurchaseOrder',        to: 'Employee',        col: 'rejected_by_employee_id' },
   { id: 'fk20', from: 'PurchaseOrderLine',    to: 'PurchaseOrder',   col: 'purchase_order_id' },
   { id: 'fk21', from: 'SupplierPayment',      to: 'BusinessPartner', col: 'business_partner_id' },
+  { id: 'fk31', from: 'SupplierPayment',      to: 'Project',         col: 'project_id' },
   { id: 'fk22', from: 'SupplierPriceQuote',   to: 'Supplier',        col: 'supplier_id' },
   { id: 'fk23', from: 'SupplierPriceQuote',   to: 'Tender',          col: 'tender_id' },
   { id: 'fk24', from: 'SupplierPriceQuote',   to: 'TradeCategory',   col: 'trade_category_id' },

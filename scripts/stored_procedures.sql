@@ -1185,14 +1185,15 @@ CREATE PROCEDURE sp_supplier_payment_create
     @supplier_payment_id INT,
     @invoiceNumber NVARCHAR(50),
     @business_partner_id INT,
+    @project_id INT,
     @amount DECIMAL(10,2),
     @dueDate DATETIME2,
     @paidDate DATETIME2,
     @status NVARCHAR(20)
 AS
 BEGIN
-    INSERT INTO SupplierPayment (supplier_payment_id, invoiceNumber, business_partner_id, amount, dueDate, paidDate, status)
-    VALUES (@supplier_payment_id, @invoiceNumber, @business_partner_id, @amount, @dueDate, @paidDate, @status);
+    INSERT INTO SupplierPayment (supplier_payment_id, invoiceNumber, business_partner_id, project_id, amount, dueDate, paidDate, status)
+    VALUES (@supplier_payment_id, @invoiceNumber, @business_partner_id, @project_id, @amount, @dueDate, @paidDate, @status);
 END
 GO
 
@@ -1200,6 +1201,7 @@ CREATE PROCEDURE sp_supplier_payment_update
     @supplier_payment_id INT,
     @invoiceNumber NVARCHAR(50),
     @business_partner_id INT,
+    @project_id INT,
     @amount DECIMAL(10,2),
     @dueDate DATETIME2,
     @paidDate DATETIME2,
@@ -1209,6 +1211,7 @@ BEGIN
     UPDATE SupplierPayment
     SET invoiceNumber = @invoiceNumber,
         business_partner_id = @business_partner_id,
+        project_id = @project_id,
         amount = @amount,
         dueDate = @dueDate,
         paidDate = @paidDate,
@@ -1229,7 +1232,7 @@ GO
 CREATE PROCEDURE sp_supplier_payment_get_all
 AS
 BEGIN
-    SELECT supplier_payment_id, invoiceNumber, business_partner_id, amount, dueDate, paidDate, status
+    SELECT supplier_payment_id, invoiceNumber, business_partner_id, amount, dueDate, paidDate, status, project_id
     FROM SupplierPayment;
 END
 GO
@@ -1238,7 +1241,7 @@ CREATE PROCEDURE sp_supplier_payment_get_by_id
     @supplier_payment_id INT
 AS
 BEGIN
-    SELECT supplier_payment_id, invoiceNumber, business_partner_id, amount, dueDate, paidDate, status
+    SELECT supplier_payment_id, invoiceNumber, business_partner_id, amount, dueDate, paidDate, status, project_id
     FROM SupplierPayment
     WHERE supplier_payment_id = @supplier_payment_id;
 END
@@ -2014,12 +2017,11 @@ GO
 -- Cash in  = PaymentRequest.amount, status IN ('Approved','Paid'), by the month
 --            of approvalDate (same rule as the profitability report and
 --            PaymentRequest.isApproved()).
--- Cash out = PurchaseOrder.totalAmount for orders that passed PM approval and
---            were not cancelled -- Sent, PartiallyReceived, Received, or Archived
---            with closureReason 'Received' -- by the month of orderDate.
---            PurchaseOrder rather than SupplierPayment: SupplierPayment links to
---            a BusinessPartner only (class diagram #29), not to a Project, so it
---            could not honour the project filter.
+-- Cash out = SupplierPayment.amount, status 'Paid', by the month of paidDate --
+--            money that actually left the company, to suppliers and
+--            subcontractors alike. Filtered by project through
+--            SupplierPayment.project_id (relationship "Project 1 -- 0..*
+--            SupplierPayment", added for exactly this report).
 -- Cumulative balance = running SUM of the monthly net (window function).
 -- ============================================================================
 
@@ -2041,15 +2043,14 @@ BEGIN
           AND pr.approvalDate <= @date_to
           AND (@project_id IS NULL OR pr.project_id = @project_id)
         UNION ALL
-        SELECT DATEFROMPARTS(YEAR(po.orderDate), MONTH(po.orderDate), 1),
+        SELECT DATEFROMPARTS(YEAR(sp.paidDate), MONTH(sp.paidDate), 1),
                CAST(0 AS DECIMAL(18,2)),
-               po.totalAmount
-        FROM PurchaseOrder po
-        WHERE (po.status IN (N'Sent', N'PartiallyReceived', N'Received')
-               OR (po.status = N'Archived' AND po.closureReason = N'Received'))
-          AND po.orderDate >= @date_from
-          AND po.orderDate <= @date_to
-          AND (@project_id IS NULL OR po.project_id = @project_id)
+               sp.amount
+        FROM SupplierPayment sp
+        WHERE sp.status = N'Paid'
+          AND sp.paidDate >= @date_from
+          AND sp.paidDate <= @date_to
+          AND (@project_id IS NULL OR sp.project_id = @project_id)
     ),
     Monthly AS (
         SELECT month_start, SUM(cash_in) AS cash_in, SUM(cash_out) AS cash_out

@@ -11,17 +11,19 @@ namespace BenZionVilker
         // References the superclass BusinessPartner, not Supplier/Subcontractor directly
         // (design/class-diagram.md Section 5 model assumption).
         private BusinessPartner businessPartner;
+        private Project project; // relationship "Project 1 -- 0..* SupplierPayment" -- which project the paid work/material was for (UC-05 cash flow)
         private decimal amount;
         private DateTime dueDate;
         private DateTime? paidDate; // nullable: not yet set while status is Pending/Overdue
         private SupplierPaymentStatus status;
 
-        public SupplierPayment(int supplierPaymentId, string invoiceNumber, BusinessPartner businessPartner, decimal amount,
+        public SupplierPayment(int supplierPaymentId, string invoiceNumber, BusinessPartner businessPartner, Project project, decimal amount,
             DateTime dueDate, DateTime? paidDate, SupplierPaymentStatus status, bool is_new)
         {
             this.supplierPaymentId = supplierPaymentId;
             this.invoiceNumber = invoiceNumber;
             this.businessPartner = businessPartner;
+            this.project = project;
             this.amount = amount;
             this.dueDate = dueDate;
             this.paidDate = paidDate;
@@ -36,6 +38,7 @@ namespace BenZionVilker
         public int getSupplierPaymentId() { return this.supplierPaymentId; }
         public string getInvoiceNumber() { return this.invoiceNumber; }
         public BusinessPartner getBusinessPartner() { return this.businessPartner; }
+        public Project getProject() { return this.project; }
         public decimal getAmount() { return this.amount; }
         public DateTime getDueDate() { return this.dueDate; }
         public DateTime? getPaidDate() { return this.paidDate; }
@@ -43,18 +46,25 @@ namespace BenZionVilker
 
         public void setInvoiceNumber(string invoiceNumber) { this.invoiceNumber = invoiceNumber; }
         public void setBusinessPartner(BusinessPartner businessPartner) { this.businessPartner = businessPartner; }
+        public void setProject(Project project) { this.project = project; }
         public void setAmount(decimal amount) { this.amount = amount; }
         public void setDueDate(DateTime dueDate) { this.dueDate = dueDate; }
         public void setPaidDate(DateTime? paidDate) { this.paidDate = paidDate; }
         public void setStatus(SupplierPaymentStatus status) { this.status = status; }
 
+        // Not paid and past its due date -- whatever the stored status says (Pending turns overdue on its own)
+        public bool isOverdue() { return this.status != SupplierPaymentStatus.Paid && DateTime.Today > this.dueDate.Date; }
+
+        public int getDaysOverdue() { return isOverdue() ? (int)(DateTime.Today - this.dueDate.Date).TotalDays : 0; }
+
         public bool createSupplierPayment()
         {
             SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_supplier_payment_create @supplier_payment_id, @invoiceNumber, @business_partner_id, @amount, @dueDate, @paidDate, @status";
+            cmd.CommandText = "EXECUTE sp_supplier_payment_create @supplier_payment_id, @invoiceNumber, @business_partner_id, @project_id, @amount, @dueDate, @paidDate, @status";
             cmd.Parameters.AddWithValue("@supplier_payment_id", this.supplierPaymentId);
             cmd.Parameters.AddWithValue("@invoiceNumber", this.invoiceNumber);
             cmd.Parameters.AddWithValue("@business_partner_id", this.businessPartner.getBusinessPartnerId());
+            cmd.Parameters.AddWithValue("@project_id", this.project.getProjectId());
             cmd.Parameters.AddWithValue("@amount", this.amount);
             cmd.Parameters.AddWithValue("@dueDate", this.dueDate);
             cmd.Parameters.AddWithValue("@paidDate", (object)this.paidDate ?? DBNull.Value);
@@ -66,10 +76,11 @@ namespace BenZionVilker
         public bool updateSupplierPayment()
         {
             SqlCommand cmd = new SqlCommand();
-            cmd.CommandText = "EXECUTE sp_supplier_payment_update @supplier_payment_id, @invoiceNumber, @business_partner_id, @amount, @dueDate, @paidDate, @status";
+            cmd.CommandText = "EXECUTE sp_supplier_payment_update @supplier_payment_id, @invoiceNumber, @business_partner_id, @project_id, @amount, @dueDate, @paidDate, @status";
             cmd.Parameters.AddWithValue("@supplier_payment_id", this.supplierPaymentId);
             cmd.Parameters.AddWithValue("@invoiceNumber", this.invoiceNumber);
             cmd.Parameters.AddWithValue("@business_partner_id", this.businessPartner.getBusinessPartnerId());
+            cmd.Parameters.AddWithValue("@project_id", this.project.getProjectId());
             cmd.Parameters.AddWithValue("@amount", this.amount);
             cmd.Parameters.AddWithValue("@dueDate", this.dueDate);
             cmd.Parameters.AddWithValue("@paidDate", (object)this.paidDate ?? DBNull.Value);
@@ -108,8 +119,9 @@ namespace BenZionVilker
                 DateTime dueDate = DateTime.Parse(rdr.GetValue(4).ToString());
                 DateTime? paidDate = rdr.GetValue(5) == DBNull.Value ? (DateTime?)null : DateTime.Parse(rdr.GetValue(5).ToString());
                 SupplierPaymentStatus status = (SupplierPaymentStatus)Enum.Parse(typeof(SupplierPaymentStatus), rdr.GetValue(6).ToString());
+                Project project = Project.seekProject(int.Parse(rdr.GetValue(7).ToString()));
 
-                SupplierPayment sp = new SupplierPayment(id, invoiceNumber, businessPartner, amount, dueDate, paidDate, status, false);
+                SupplierPayment sp = new SupplierPayment(id, invoiceNumber, businessPartner, project, amount, dueDate, paidDate, status, false);
                 Program.SupplierPayments.Add(sp);
             }
         }

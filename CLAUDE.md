@@ -193,7 +193,7 @@ Tender (FK: Client)
       → SubmittedDocument (FK: PaymentRequest)
     → PurchaseOrder (FK: Supplier, Project, Employee[createdBy/approvedBy/overrideApprovedBy])
       → PurchaseOrderLine (FK: PurchaseOrder)
-SupplierPayment (FK: BusinessPartner)
+SupplierPayment (FK: BusinessPartner, Project)
 ```
 
 **Phase 3 — Association / link classes (loaded last):**

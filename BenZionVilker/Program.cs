@@ -62,7 +62,7 @@ namespace BenZionVilker
             SubmittedDocument.initSubmittedDocuments();     // FK: PaymentRequest
             PurchaseOrder.initPurchaseOrders();             // FK: Supplier, Project, Employee
             PurchaseOrderLine.initPurchaseOrderLines();     // FK: PurchaseOrder
-            SupplierPayment.initSupplierPayments();         // FK: BusinessPartner
+            SupplierPayment.initSupplierPayments();         // FK: BusinessPartner, Project
 
             // Phase 3
             SupplierPriceQuote.initSupplierPriceQuotes();   // Supplier + Tender + TradeCategory
