@@ -19,7 +19,7 @@ GO
 -- order it pays for; a subcontractor's to the project matching its trade.
 UPDATE SupplierPayment SET project_id = CASE supplier_payment_id
     WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 3 THEN 3 WHEN 4 THEN 1 WHEN 5 THEN 4
-    WHEN 6 THEN 3 WHEN 7 THEN 6 WHEN 8 THEN 2 WHEN 9 THEN 2 WHEN 10 THEN 1 END;
+    WHEN 6 THEN 3 WHEN 7 THEN 2 WHEN 8 THEN 2 WHEN 9 THEN 2 WHEN 10 THEN 1 END;
 GO
 
 ALTER TABLE SupplierPayment ALTER COLUMN project_id INT NOT NULL;
@@ -33,7 +33,7 @@ INSERT INTO SupplierPayment (supplier_payment_id, invoiceNumber, business_partne
 (11, N'INV-4584', 5, 3, 210000.00, '2025-11-30', '2025-11-28', N'Paid'),
 (12, N'INV-4590', 4, 4, 43009.20, '2026-01-15', '2026-01-12', N'Paid'),
 (13, N'INV-4596', 6, 3, 165000.00, '2026-01-31', '2026-01-29', N'Paid'),
-(14, N'INV-4602', 8, 6, 48000.00, '2026-03-31', '2026-03-30', N'Paid');
+(14, N'INV-4602', 8, 2, 48000.00, '2026-03-31', '2026-03-30', N'Paid');
 GO
 
 ALTER PROCEDURE sp_supplier_payment_create

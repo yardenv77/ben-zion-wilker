@@ -263,17 +263,17 @@ GO
 -- Employee-role associations from the updated class diagram. status covers all 9 leaf
 -- POStatus values (UnderApproval/InFulfillment are transient superstate values and are
 -- never actually persisted -- see the note at the top of this file).
-INSERT INTO PurchaseOrder (purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason) VALUES
-(1, N'PO-2025-0143', 1, 1, 11, 9, NULL, '2025-09-15', 149760.00, 21760.00, N'Sent', NULL, NULL),
-(2, N'PO-2025-0156', 2, 2, 11, 10, NULL, '2025-10-01', 59670.00, 8670.00, N'Received', NULL, N'Received'),
-(3, N'PO-2025-0161', 1, 1, 11, NULL, NULL, '2025-10-10', 152451.00, 22151.00, N'PendingPMApproval', NULL, NULL),
-(4, N'PO-2025-0178', 4, 4, 11, 10, NULL, '2025-11-05', 43009.20, 6249.20, N'Sent', NULL, NULL),
-(5, N'PO-2025-0122', 3, 3, 11, NULL, NULL, '2025-08-20', 37440.00, 5440.00, N'Rejected', N'המחיר חורג משמעותית מהצעת המחיר המקורית שאושרה', NULL),
-(6, N'PO-2026-0033', 2, 2, 11, NULL, 13, '2026-01-05', 280741.50, 40791.50, N'PendingBudgetOverride', NULL, NULL),
-(7, N'PO-2026-0058', 1, 1, 11, 9, 13, '2026-02-10', 66690.00, 9690.00, N'Archived', NULL, N'Received'),
-(8, N'PO-2026-0071', 4, 4, 11, 10, NULL, '2026-02-20', 26114.40, 3794.40, N'PartiallyReceived', NULL, NULL),
-(9, N'PO-2026-0084', 2, 2, 11, NULL, NULL, '2026-03-01', 111618.00, 16218.00, N'Draft', NULL, NULL),
-(10, N'PO-2026-0097', 1, 1, 11, NULL, NULL, '2026-03-10', 147607.20, 21447.20, N'Cancelled', NULL, N'Cancelled');
+INSERT INTO PurchaseOrder (purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason, rejectedAt, archivedAt, everSubmitted, rejected_by_employee_id) VALUES
+(1, N'PO-2025-0143', 1, 1, 11, 9, NULL, '2025-09-15', 149760.00, 21760.00, N'Sent', NULL, NULL, NULL, NULL, 1, NULL),
+(2, N'PO-2025-0156', 2, 2, 11, 10, NULL, '2025-10-01', 59670.00, 8670.00, N'Received', NULL, N'Received', NULL, NULL, 1, NULL),
+(3, N'PO-2025-0161', 1, 1, 11, NULL, NULL, '2025-10-10', 152451.00, 22151.00, N'PendingPMApproval', NULL, NULL, NULL, NULL, 1, NULL),
+(4, N'PO-2025-0178', 4, 4, 11, 10, NULL, '2025-11-05', 43009.20, 6249.20, N'Sent', NULL, NULL, NULL, NULL, 1, NULL),
+(5, N'PO-2025-0122', 3, 3, 11, NULL, NULL, '2025-08-20', 37440.00, 5440.00, N'Rejected', N'המחיר חורג משמעותית מהצעת המחיר המקורית שאושרה', NULL, '2025-08-25', NULL, 1, 9),
+(6, N'PO-2026-0033', 2, 2, 11, NULL, 13, '2026-01-05', 280741.50, 40791.50, N'PendingBudgetOverride', NULL, NULL, NULL, NULL, 1, NULL),
+(7, N'PO-2026-0058', 1, 1, 11, 9, 13, '2026-02-10', 66690.00, 9690.00, N'Archived', NULL, N'Received', NULL, '2026-03-31', 1, NULL),
+(8, N'PO-2026-0071', 4, 4, 11, 10, NULL, '2026-02-20', 26114.40, 3794.40, N'PartiallyReceived', NULL, NULL, NULL, NULL, 1, NULL),
+(9, N'PO-2026-0084', 2, 2, 11, NULL, NULL, '2026-03-01', 111618.00, 16218.00, N'Draft', NULL, NULL, NULL, NULL, 0, NULL),
+(10, N'PO-2026-0097', 1, 1, 11, NULL, NULL, '2026-03-10', 147607.20, 21447.20, N'Cancelled', NULL, N'Cancelled', NULL, NULL, 1, NULL);
 GO
 
 -- PurchaseOrderLine (16) -- PurchaseOrder 1 -- 1..* PurchaseOrderLine; receivedQuantity
@@ -310,14 +310,14 @@ INSERT INTO SupplierPayment (supplier_payment_id, invoiceNumber, business_partne
 (4, N'INV-4519', 6, 1, 280000.00, '2026-03-01', '2026-02-25', N'Paid'),
 (5, N'INV-4527', 4, 4, 64000.00, '2025-12-05', NULL, N'Overdue'),
 (6, N'INV-4533', 3, 3, 45000.00, '2025-09-20', '2025-09-19', N'Paid'),
-(7, N'INV-4548', 8, 6, 96000.00, '2026-04-01', NULL, N'Pending'),
+(7, N'INV-4548', 8, 2, 96000.00, '2026-04-01', NULL, N'Pending'),
 (8, N'INV-4551', 2, 2, 310000.00, '2026-04-15', NULL, N'Pending'),
 (9, N'INV-4563', 7, 2, 52000.00, '2025-08-10', NULL, N'Overdue'),
 (10, N'INV-4579', 1, 1, 128000.00, '2026-05-01', NULL, N'Pending'),
 (11, N'INV-4584', 5, 3, 210000.00, '2025-11-30', '2025-11-28', N'Paid'),
 (12, N'INV-4590', 4, 4, 43009.20, '2026-01-15', '2026-01-12', N'Paid'),
 (13, N'INV-4596', 6, 3, 165000.00, '2026-01-31', '2026-01-29', N'Paid'),
-(14, N'INV-4602', 8, 6, 48000.00, '2026-03-31', '2026-03-30', N'Paid');
+(14, N'INV-4602', 8, 2, 48000.00, '2026-03-31', '2026-03-30', N'Paid');
 GO
 
 -- ============================================================================
