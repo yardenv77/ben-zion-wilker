@@ -204,7 +204,9 @@ INSERT INTO BudgetLine (budget_line_id, project_id, category, plannedAmount, act
 (10, 5, N'קבלני משנה', 1800000.00, 200000.00);
 GO
 
--- PaymentRequest (10) -- covers all PaymentRequestStatus values. missingDocuments is
+-- PaymentRequest (16) -- covers all PaymentRequestStatus values. Rows 11-16 are further
+-- approved/paid requests, so the UC-05 report shows a realistic mix: three projects at a
+-- 9-15% margin, the on-hold and the cancelled project at a loss. missingDocuments is
 -- no longer a column here: which documents are missing is now derived from
 -- SubmittedDocument (getMissingDocuments()), seeded below.
 INSERT INTO PaymentRequest (payment_request_id, project_id, amount, submissionDate, approvalDate, status) VALUES
@@ -217,7 +219,13 @@ INSERT INTO PaymentRequest (payment_request_id, project_id, amount, submissionDa
 (7, 4, 310000.00, '2025-10-05', NULL, N'Rejected'),
 (8, 4, 200000.00, '2026-01-20', '2026-02-01', N'Paid'),
 (9, 5, 500000.00, '2025-12-01', NULL, N'UnderReview'),
-(10, 1, 150000.00, '2026-06-01', NULL, N'Submitted');
+(10, 1, 150000.00, '2026-06-01', NULL, N'Submitted'),
+(11, 1, 900000.00, '2025-11-25', '2025-12-10', N'Paid'),
+(12, 1, 800000.00, '2026-03-05', '2026-03-20', N'Approved'),
+(13, 2, 870000.00, '2026-01-02', '2026-01-15', N'Paid'),
+(14, 3, 1500000.00, '2025-10-06', '2025-10-20', N'Paid'),
+(15, 3, 1500000.00, '2026-03-25', '2026-04-10', N'Approved'),
+(16, 4, 800000.00, '2025-12-14', '2025-12-28', N'Paid');
 GO
 
 -- SubmittedDocument (22) -- composition child of PaymentRequest; request 4 is missing
