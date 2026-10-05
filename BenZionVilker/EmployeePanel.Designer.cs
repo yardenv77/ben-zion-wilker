@@ -182,7 +182,7 @@ namespace BenZionVilker
             this.label_certificationNo.Name = "label_certificationNo";
             this.label_certificationNo.Size = new System.Drawing.Size(92, 17);
             this.label_certificationNo.TabIndex = 14;
-            this.label_certificationNo.Text = "מספר הסמכה";
+            this.label_certificationNo.Text = "מספר הסמכה (רשות)";
             //
             // textBox_certificationNo
             //

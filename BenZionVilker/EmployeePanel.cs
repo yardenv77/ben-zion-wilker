@@ -102,11 +102,9 @@ namespace BenZionVilker
                 MessageBox.Show("יש להזין תעריף יומי תקין (גדול מ-0)", "שגיאה", MessageBoxButtons.OK);
                 return false;
             }
-            if (string.IsNullOrWhiteSpace(textBox_certificationNo.Text))
-            {
-                MessageBox.Show("יש להזין מספר הסמכה", "שגיאה", MessageBoxButtons.OK);
-                return false;
-            }
+            // certificationNo is optional (UC-02 spec: "Certification/License No. (Alphanumeric,
+            // Optional)") -- not every role holds a licence; an employee without one is saved
+            // with an empty value.
             if (!System.Text.RegularExpressions.Regex.IsMatch(textBox_nationalId.Text, @"^\d{9}$"))
             {
                 MessageBox.Show("תעודת זהות חייבת להיות בת 9 ספרות", "שגיאה", MessageBoxButtons.OK);

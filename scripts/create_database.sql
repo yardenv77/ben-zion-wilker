@@ -56,7 +56,7 @@ CREATE TABLE Employee (
     nationalId NVARCHAR(50) NOT NULL,
     role NVARCHAR(20) NOT NULL,
     dailyRate DECIMAL(10,2) NOT NULL,
-    certificationNo NVARCHAR(50) NOT NULL, -- TODO: is a certification number required for every employee/role, or only some (e.g. EquipmentManager)? Diagram doesn't say.
+    certificationNo NVARCHAR(50) NOT NULL, -- optional in the UI (UC-02 spec): an employee without a licence is stored with an empty string
     status NVARCHAR(20) NOT NULL,
     -- role: widened from 3 field-workforce values to all 8 system-actor roles, per
     -- the updated class diagram merging EmployeeRole with the system-access role list.
