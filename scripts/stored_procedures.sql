@@ -2004,7 +2004,7 @@ BEGIN
     LEFT JOIN Revenue r ON r.project_id = p.project_id
     LEFT JOIN Cost c ON c.project_id = p.project_id
     WHERE (@project_id IS NULL OR p.project_id = @project_id)
-      AND (r.revenue IS NOT NULL OR c.actualCost IS NOT NULL)
+      AND (ISNULL(r.revenue, 0) <> 0 OR ISNULL(c.actualCost, 0) <> 0) -- a project with no money in or out says nothing about profitability
     ORDER BY p.project_id;
 END
 GO
