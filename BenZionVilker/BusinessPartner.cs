@@ -39,6 +39,20 @@ namespace BenZionVilker
         public double getRating() { return this.rating; }
         public PartnerStatus getStatus() { return this.status; }
 
+        public bool isActive() { return this.status == PartnerStatus.Active; }
+
+        // Payments to this partner (relationship #29 is on BusinessPartner, so it covers
+        // suppliers and subcontractors alike), oldest due date first
+        public List<SupplierPayment> getEngagementHistory()
+        {
+            List<SupplierPayment> history = new List<SupplierPayment>();
+            foreach (SupplierPayment sp in Program.SupplierPayments)
+                if (sp.getBusinessPartner() == this)
+                    history.Add(sp);
+            history.Sort((a, b) => a.getDueDate().CompareTo(b.getDueDate()));
+            return history;
+        }
+
         public void setName(string name) { this.name = name; }
         public void setCompanyRegistrationNo(string companyRegistrationNo) { this.companyRegistrationNo = companyRegistrationNo; }
         public void setContactPerson(string contactPerson) { this.contactPerson = contactPerson; }

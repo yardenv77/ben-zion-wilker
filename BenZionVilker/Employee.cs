@@ -44,6 +44,16 @@ namespace BenZionVilker
         public string getCertificationNo() { return this.certificationNo; }
         public EmployeeStatus getStatus() { return this.status; }
 
+        // Active, and not already recorded as working on a site that day (Attendance)
+        public bool isAvailable(DateTime date)
+        {
+            if (this.status != EmployeeStatus.Active) return false;
+            foreach (Attendance a in Program.Attendances)
+                if (a.getEmployee() == this && a.getDailyWorkLog().getLogDate().Date == date.Date)
+                    return false;
+            return true;
+        }
+
         public void setFirstName(string firstName) { this.firstName = firstName; }
         public void setLastName(string lastName) { this.lastName = lastName; }
         public void setNationalId(string nationalId) { this.nationalId = nationalId; }

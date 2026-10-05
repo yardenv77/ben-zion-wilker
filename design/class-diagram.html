@@ -90,7 +90,7 @@ const CLASSES = [
       // queries (guards BR-2 / BR-5)
       '+ calculateTotal() : Money', '+ calculateVat() : Money', '+ exceedsBudget() : Boolean', '+ isFullyReceived() : Boolean',
       // events of the state diagram -> public methods
-      '+ addLine(line : PurchaseOrderLine)', '+ editLine(line : PurchaseOrderLine)', '+ submit()', '+ withdraw()',
+      '+ addLine(line : PurchaseOrderLine) : Boolean', '+ editLine(line : PurchaseOrderLine) : Boolean', '+ submit()', '+ withdraw()',
       '+ approveBudgetOverride(ceo : Employee)', '+ approve(pm : Employee)', '+ reject(reason : String, by : Employee)',
       '+ revise()', '+ cancel()', '+ autoCancel()',
       '+ receiveDelivery(line : PurchaseOrderLine, qty : Real)', '+ cancelRemaining(supplierAgreed : Boolean)', '+ archive()', '+ purge()',
@@ -98,7 +98,7 @@ const CLASSES = [
       '- setStatus(status : POStatus)', '- setClosureReason(reason : ClosureReason)',
       '- flagForOverride()', '- requestPMApproval()', '- returnToAccountant()', '- markAsSent()', '- closeAsReceived()', '- closeAsCancelled()',
       '- notifyCEO()', '- notifyProjectManager()', '- notifyAccountant()', '- sendPOEmailToSupplier()',
-      '- recalculateTotals()', '- recordRejection(reason : String, by : Employee)', '- recordDelivery()', '- delete()'
+      '- recalculateTotals()', '- recordRejection(reason : String, by : Employee)', '- recordDelivery(line : PurchaseOrderLine, qty : Real)', '- delete()'
     ],
     x: 1320, y: 560 },
   { id: 'PurchaseOrderLine', name: 'PurchaseOrderLine', stereotype: null, isEnum: false, isExternal: false, isAbstract: false, inScope: true,

@@ -24,6 +24,11 @@ namespace BenZionVilker
         private DateTime? archivedAt; // nullable: 7-year retention guard support, set on entry to Archived
         private bool everSubmitted; // BR-1 guard: has this order ever left Draft? See submit()/cancel()
         private Employee rejectedBy; // nullable: only set on entry to Rejected -- whichever role actually rejected (PM from PendingPMApproval, CEO from PendingBudgetOverride), cleared on revise() back to Draft
+        private string lastNotification; // in-memory only: what the last transition's notify*()/sendPOEmailToSupplier() sent, for the panel to show
+
+        // Same 17% as sp_purchase_order_create_flow's @vat_rate -- the class diagram has
+        // no VatRate entity (model assumption: VAT is a simple Money attribute per class).
+        public const decimal VatRate = 0.17m;
 
         public PurchaseOrder(int purchaseOrderId, string poNumber, Supplier supplier, Project project,
             Employee createdBy, Employee approvedBy, Employee overrideApprovedBy, DateTime orderDate,
@@ -207,13 +212,50 @@ namespace BenZionVilker
         // message the panel shows via MessageBox (step 7.5).
         // ====================================================================
 
+        public List<PurchaseOrderLine> getLines()
+        {
+            List<PurchaseOrderLine> lines = new List<PurchaseOrderLine>();
+            foreach (PurchaseOrderLine line in Program.PurchaseOrderLines)
+                if (line.getPurchaseOrder() == this)
+                    lines.Add(line);
+            return lines;
+        }
+
+        // VAT on the sum of the line totals, rounded like sp_purchase_order_create_flow
+        public decimal calculateVat()
+        {
+            decimal subtotal = 0;
+            foreach (PurchaseOrderLine line in getLines())
+                subtotal += line.getLineTotal();
+            return Math.Round(subtotal * VatRate, 2);
+        }
+
+        // Total including VAT -- the same meaning as the stored totalAmount column
+        public decimal calculateTotal()
+        {
+            decimal subtotal = 0;
+            foreach (PurchaseOrderLine line in getLines())
+                subtotal += line.getLineTotal();
+            return subtotal + calculateVat();
+        }
+
+        // BR-2 guard: does the order exceed what is left on the project's budget lines?
         public bool exceedsBudget()
         {
             decimal remaining = 0;
             foreach (BudgetLine bl in Program.BudgetLines)
                 if (bl.getProject() == this.project)
-                    remaining += bl.getPlannedAmount() - bl.getActualAmount();
+                    remaining += bl.getVariance();
             return this.totalAmount > remaining;
+        }
+
+        // What the last transition notified (notifyCEO/notifyProjectManager/notifyAccountant,
+        // or the supplier email). Read once by the panel after the transition, then cleared.
+        public string takeNotification()
+        {
+            string n = this.lastNotification;
+            this.lastNotification = null;
+            return n;
         }
 
         public bool isFullyReceived()
@@ -244,7 +286,10 @@ namespace BenZionVilker
             SC.execute_non_query(cmd);
 
             this.everSubmitted = true;
-            this.status = newStatus;
+            if (newStatus == POStatus.PendingBudgetOverride)
+                flagForOverride();
+            else
+                requestPMApproval();
         }
 
         // t3: UnderApproval (either sub-state) -> Draft
@@ -259,7 +304,7 @@ namespace BenZionVilker
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
-            this.status = POStatus.Draft;
+            setStatus(POStatus.Draft);
         }
 
         // t4a/t4b: PendingPMApproval -> Rejected (PM rejects) or PendingBudgetOverride ->
@@ -276,20 +321,18 @@ namespace BenZionVilker
             if (rejectedBy == null)
                 throw new InvalidOperationException("יש לבחור מי דוחה את ההזמנה");
 
-            DateTime now = DateTime.Now;
+            recordRejection(reason, rejectedBy);
+
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_purchase_order_reject @purchase_order_id, @rejectionReason, @rejectedAt, @rejected_by_employee_id";
             cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
-            cmd.Parameters.AddWithValue("@rejectionReason", reason);
-            cmd.Parameters.AddWithValue("@rejectedAt", now);
-            cmd.Parameters.AddWithValue("@rejected_by_employee_id", rejectedBy.getEmployeeId());
+            cmd.Parameters.AddWithValue("@rejectionReason", this.rejectionReason);
+            cmd.Parameters.AddWithValue("@rejectedAt", this.rejectedAt.Value);
+            cmd.Parameters.AddWithValue("@rejected_by_employee_id", this.rejectedBy.getEmployeeId());
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
-            this.status = POStatus.Rejected;
-            this.rejectionReason = reason;
-            this.rejectedAt = now;
-            this.rejectedBy = rejectedBy;
+            returnToAccountant();
         }
 
         // t5: Rejected -> Draft
@@ -304,7 +347,7 @@ namespace BenZionVilker
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
-            this.status = POStatus.Draft;
+            setStatus(POStatus.Draft);
             this.rejectedAt = null;
             this.rejectedBy = null;
         }
@@ -323,8 +366,7 @@ namespace BenZionVilker
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
-            this.status = POStatus.Cancelled;
-            this.closureReason = ClosureReason.Cancelled;
+            closeAsCancelled();
         }
 
         // t7/t8: Draft -> deleted (BR-1: never submitted) or Draft -> Cancelled (BR-1: previously submitted)
@@ -335,14 +377,7 @@ namespace BenZionVilker
 
             if (!this.everSubmitted)
             {
-                SqlCommand cmd = new SqlCommand();
-                cmd.CommandText = "EXECUTE sp_purchase_order_cancel_delete @purchase_order_id";
-                cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
-                SQL_CON SC = new SQL_CON();
-                SC.execute_non_query(cmd);
-
-                Program.PurchaseOrderLines.RemoveAll(l => l.getPurchaseOrder() == this);
-                Program.PurchaseOrders.Remove(this);
+                delete();
             }
             else
             {
@@ -352,8 +387,7 @@ namespace BenZionVilker
                 SQL_CON SC = new SQL_CON();
                 SC.execute_non_query(cmd);
 
-                this.status = POStatus.Cancelled;
-                this.closureReason = ClosureReason.Cancelled;
+                closeAsCancelled();
             }
         }
 
@@ -374,8 +408,8 @@ namespace BenZionVilker
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
-            this.overrideApprovedBy = ceo;
-            this.status = POStatus.PendingPMApproval;
+            setOverrideApprovedBy(ceo);
+            requestPMApproval();
         }
 
         // t11: PendingPMApproval -> InFulfillment (enters Sent). approvedBy {role=ProjectManager}
@@ -394,8 +428,8 @@ namespace BenZionVilker
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
-            this.approvedBy = projectManager;
-            this.status = POStatus.Sent;
+            setApprovedBy(projectManager);
+            markAsSent();
         }
 
         // UC-03.Include: "Send Purchase Order Email to Supplier" (docs/00e-use-cases.md MSS
@@ -465,9 +499,11 @@ namespace BenZionVilker
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
-            line.setReceivedQuantity(newReceivedQuantity);
-            this.status = newStatus;
-            if (newClosureReason.HasValue) this.closureReason = newClosureReason;
+            recordDelivery(line, newReceivedQuantity);
+            if (willBeFullyReceived)
+                closeAsReceived();
+            else
+                setStatus(POStatus.PartiallyReceived);
         }
 
         // t17: InFulfillment (either sub-state) -> Cancelled (BR-4)
@@ -484,8 +520,7 @@ namespace BenZionVilker
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
-            this.status = POStatus.Cancelled;
-            this.closureReason = ClosureReason.Cancelled;
+            closeAsCancelled();
         }
 
         // t18/t19: Received or Cancelled -> Archived
@@ -502,7 +537,7 @@ namespace BenZionVilker
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);
 
-            this.status = POStatus.Archived;
+            setStatus(POStatus.Archived); // closureReason is kept, per the state diagram's retention note
             this.archivedAt = now;
         }
 
@@ -516,6 +551,148 @@ namespace BenZionVilker
 
             SqlCommand cmd = new SqlCommand();
             cmd.CommandText = "EXECUTE sp_purchase_order_purge @purchase_order_id";
+            cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
+            SQL_CON SC = new SQL_CON();
+            SC.execute_non_query(cmd);
+
+            Program.PurchaseOrderLines.RemoveAll(l => l.getPurchaseOrder() == this);
+            Program.PurchaseOrders.Remove(this);
+        }
+
+        // ====================================================================
+        // t1: Draft -> Draft (self) "Line added or edited / recalculateTotals()".
+        // Lines can change only while the order is still a Draft; any change
+        // recomputes the stored totals from the lines.
+        // ====================================================================
+
+        public bool addLine(PurchaseOrderLine line)
+        {
+            if (this.status != POStatus.Draft)
+                throw new InvalidOperationException("ניתן להוסיף שורות רק להזמנה שנמצאת בטיוטה");
+            if (line == null || line.getPurchaseOrder() != this)
+                throw new InvalidOperationException("השורה אינה שייכת להזמנה זו");
+
+            if (!line.createPurchaseOrderLine()) return false;
+            Program.PurchaseOrderLines.Add(line);
+            recalculateTotals();
+            return true;
+        }
+
+        public bool editLine(PurchaseOrderLine line)
+        {
+            if (this.status != POStatus.Draft)
+                throw new InvalidOperationException("ניתן לערוך שורות רק בהזמנה שנמצאת בטיוטה");
+            if (line == null || line.getPurchaseOrder() != this)
+                throw new InvalidOperationException("השורה אינה שייכת להזמנה זו");
+
+            if (!line.updatePurchaseOrderLine()) return false;
+            recalculateTotals();
+            return true;
+        }
+
+        private void recalculateTotals()
+        {
+            this.vatAmount = calculateVat();
+            this.totalAmount = calculateTotal();
+            updatePurchaseOrder();
+        }
+
+        // ====================================================================
+        // Entry wrappers of the state diagram (note "Entry wrapper methods" in
+        // design/state-diagram.html): each sets the state's POStatus literal
+        // and runs that state's entry action.
+        // ====================================================================
+
+        private void flagForOverride()
+        {
+            setStatus(POStatus.PendingBudgetOverride);
+            notifyCEO();
+        }
+
+        private void requestPMApproval()
+        {
+            setStatus(POStatus.PendingPMApproval);
+            notifyProjectManager();
+        }
+
+        private void returnToAccountant()
+        {
+            setStatus(POStatus.Rejected);
+            notifyAccountant();
+        }
+
+        private void markAsSent()
+        {
+            setStatus(POStatus.Sent);
+            sendPOEmailToSupplier();
+        }
+
+        private void closeAsReceived()
+        {
+            setStatus(POStatus.Received);
+            setClosureReason(ClosureReason.Received);
+        }
+
+        private void closeAsCancelled()
+        {
+            setStatus(POStatus.Cancelled);
+            setClosureReason(ClosureReason.Cancelled);
+        }
+
+        // ====================================================================
+        // Notifications. There is no messaging service in this system, so a
+        // notification is the message text itself; the panel shows it right
+        // after the transition (takeNotification()).
+        // ====================================================================
+
+        private void notifyCEO()
+        {
+            this.lastNotification = "נשלחה התראה למנכ\"ל: הזמנה " + this.poNumber + " בסך " + this.totalAmount.ToString("N2")
+                + " ש\"ח חורגת מיתרת התקציב של פרויקט \"" + this.project.getName() + "\" וממתינה לאישור חריגה.";
+        }
+
+        private void notifyProjectManager()
+        {
+            Employee pm = this.project.getProjectManager();
+            string to = pm == null ? "מנהל הפרויקט" : "מנהל הפרויקט " + pm.getFullName();
+            this.lastNotification = "נשלחה התראה ל" + to + ": הזמנה " + this.poNumber + " ממתינה לאישורו.";
+        }
+
+        private void notifyAccountant()
+        {
+            this.lastNotification = "נשלחה התראה ל" + this.createdBy.getFullName() + ": הזמנה " + this.poNumber
+                + " נדחתה על ידי " + this.rejectedBy.getFullName() + ". סיבה: " + this.rejectionReason;
+        }
+
+        // UC-03.Include "Send Purchase Order Email to Supplier", the entry action of Sent
+        private void sendPOEmailToSupplier()
+        {
+            this.lastNotification = composeSupplierEmail();
+        }
+
+        // ====================================================================
+        // Transition actions
+        // ====================================================================
+
+        // t4a/t4b action: who rejected and why; cleared again by revise() (t5)
+        private void recordRejection(string reason, Employee rejectedBy)
+        {
+            setRejectionReason(reason);
+            this.rejectedAt = DateTime.Now;
+            this.rejectedBy = rejectedBy;
+        }
+
+        // t14/t15/t16 action: the delivered quantity lands on the line (BR-5)
+        private void recordDelivery(PurchaseOrderLine line, double newReceivedQuantity)
+        {
+            line.setReceivedQuantity(newReceivedQuantity);
+        }
+
+        // t7 action: a never-submitted Draft is deleted together with its lines (composition, BR-1)
+        private void delete()
+        {
+            SqlCommand cmd = new SqlCommand();
+            cmd.CommandText = "EXECUTE sp_purchase_order_cancel_delete @purchase_order_id";
             cmd.Parameters.AddWithValue("@purchase_order_id", this.purchaseOrderId);
             SQL_CON SC = new SQL_CON();
             SC.execute_non_query(cmd);

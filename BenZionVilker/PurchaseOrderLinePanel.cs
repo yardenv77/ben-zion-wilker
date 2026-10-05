@@ -133,9 +133,20 @@ namespace BenZionVilker
             int id = PurchaseOrderLine.getNextPurchaseOrderLineId();
             // A new line always starts at 0 received (BR-5) -- receivedQuantity changes
             // only through PurchaseOrder.receiveDelivery(), never at line creation.
-            PurchaseOrderLine line = new PurchaseOrderLine(id, resolveSelectedPurchaseOrder(), textBox_description.Text, textBox_unitOfMeasure.Text,
-                double.Parse(textBox_quantity.Text), decimal.Parse(textBox_unitPrice.Text), 0, true);
+            PurchaseOrder po = resolveSelectedPurchaseOrder();
+            PurchaseOrderLine line = new PurchaseOrderLine(id, po, textBox_description.Text, textBox_unitOfMeasure.Text,
+                double.Parse(textBox_quantity.Text), decimal.Parse(textBox_unitPrice.Text), 0, false);
 
+            // t1 in the state diagram: the order adds the line and recalculates its totals
+            try
+            {
+                po.addLine(line);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "לא ניתן לבצע פעולה", MessageBoxButtons.OK);
+                return;
+            }
             if (!Program.PurchaseOrderLines.Contains(line)) return;
 
             MessageBox.Show("שורת הפריט נשמרה בהצלחה", "הודעה", MessageBoxButtons.OK);
@@ -152,12 +163,30 @@ namespace BenZionVilker
             }
             if (!validateFields()) return;
 
-            selectedLine.setPurchaseOrder(resolveSelectedPurchaseOrder());
+            // Checked here, before any field changes, so a refused edit leaves the line untouched
+            PurchaseOrder po = resolveSelectedPurchaseOrder();
+            if (selectedLine.getPurchaseOrder().getStatus() != POStatus.Draft || po.getStatus() != POStatus.Draft)
+            {
+                MessageBox.Show("ניתן לערוך שורות רק בהזמנה שנמצאת בטיוטה", "לא ניתן לבצע פעולה", MessageBoxButtons.OK);
+                return;
+            }
+
+            selectedLine.setPurchaseOrder(po);
             selectedLine.setDescription(textBox_description.Text);
             selectedLine.setUnitOfMeasure(textBox_unitOfMeasure.Text);
             selectedLine.setQuantity(double.Parse(textBox_quantity.Text));
             selectedLine.setUnitPrice(decimal.Parse(textBox_unitPrice.Text));
-            if (!selectedLine.updatePurchaseOrderLine()) return;
+
+            // t1 in the state diagram: the order saves the line and recalculates its totals
+            try
+            {
+                if (!po.editLine(selectedLine)) return;
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "לא ניתן לבצע פעולה", MessageBoxButtons.OK);
+                return;
+            }
 
             MessageBox.Show("שורת הפריט עודכנה בהצלחה", "הודעה", MessageBoxButtons.OK);
             clearForm();

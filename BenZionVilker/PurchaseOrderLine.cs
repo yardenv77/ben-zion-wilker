@@ -40,6 +40,12 @@ namespace BenZionVilker
         public double getReceivedQuantity() { return this.receivedQuantity; }
         public double getRemainingQuantity() { return this.quantity - this.receivedQuantity; }
 
+        // quantity * unitPrice, before VAT -- summed by PurchaseOrder.calculateTotal()/calculateVat()
+        public decimal getLineTotal() { return (decimal)this.quantity * this.unitPrice; }
+
+        // A line with no price yet (0) still counts toward the order but contributes nothing to its total
+        public bool isPriced() { return this.unitPrice > 0; }
+
         public void setPurchaseOrder(PurchaseOrder purchaseOrder) { this.purchaseOrder = purchaseOrder; }
         public void setDescription(string description) { this.description = description; }
         public void setUnitOfMeasure(string unitOfMeasure) { this.unitOfMeasure = unitOfMeasure; }

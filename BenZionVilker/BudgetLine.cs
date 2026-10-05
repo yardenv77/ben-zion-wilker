@@ -32,6 +32,15 @@ namespace BenZionVilker
         public decimal getPlannedAmount() { return this.plannedAmount; }
         public decimal getActualAmount() { return this.actualAmount; }
 
+        // Planned minus actual: what is left on this line (negative = overrun)
+        public decimal getVariance() { return this.plannedAmount - this.actualAmount; }
+
+        // Has actual spending reached the given percentage of the planned amount?
+        public bool isOverThreshold(double percent)
+        {
+            return this.actualAmount >= this.plannedAmount * (decimal)percent / 100;
+        }
+
         public void setProject(Project project) { this.project = project; }
         public void setCategory(string category) { this.category = category; }
         public void setPlannedAmount(decimal plannedAmount) { this.plannedAmount = plannedAmount; }

@@ -57,7 +57,44 @@ namespace BenZionVilker
         public void setPlannedEndDate(DateTime plannedEndDate) { this.plannedEndDate = plannedEndDate; }
         public void setActualStartDate(DateTime? actualStartDate) { this.actualStartDate = actualStartDate; }
         public void setActualEndDate(DateTime? actualEndDate) { this.actualEndDate = actualEndDate; }
-        public void setStatus(ProjectStatus status) { this.status = status; }
+        // Revenue (approved payment requests) minus actual cost (the project's budget lines)
+        public decimal calculateProfitability()
+        {
+            decimal revenue = 0, actualCost = 0;
+            foreach (PaymentRequest pr in Program.PaymentRequests)
+                if (pr.getProject() == this && pr.isApproved())
+                    revenue += pr.getAmount();
+            foreach (BudgetLine bl in Program.BudgetLines)
+                if (bl.getProject() == this)
+                    actualCost += bl.getActualAmount();
+            return revenue - actualCost;
+        }
+
+        // Actual cost across all budget lines is above what was planned
+        public bool isOverBudget()
+        {
+            decimal planned = 0, actual = 0;
+            foreach (BudgetLine bl in Program.BudgetLines)
+            {
+                if (bl.getProject() != this) continue;
+                planned += bl.getPlannedAmount();
+                actual += bl.getActualAmount();
+            }
+            return actual > planned;
+        }
+
+        // Elapsed share of the planned schedule, 0-100 (time-based; there is no per-task progress data)
+        public double getCurrentProgress()
+        {
+            if (this.status == ProjectStatus.Completed) return 100;
+            DateTime start = this.actualStartDate ?? this.plannedStartDate;
+            double totalDays = (this.plannedEndDate - start).TotalDays;
+            if (totalDays <= 0) return 0;
+            double elapsed = (DateTime.Today - start).TotalDays;
+            return Math.Max(0, Math.Min(100, Math.Round(elapsed / totalDays * 100, 1)));
+        }
+
+        public void setStatus(ProjectStatus status){ this.status = status; }
 
         public bool createProject()
         {

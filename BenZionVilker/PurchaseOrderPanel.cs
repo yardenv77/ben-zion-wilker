@@ -383,13 +383,22 @@ namespace BenZionVilker
             return true;
         }
 
+        // The transition's own message, plus whatever notify*() the state's entry action sent
+        private void showTransitionResult(string message)
+        {
+            string notification = selectedPurchaseOrder.takeNotification();
+            string text = notification == null ? message : message + "\n\n" + notification;
+            MessageBox.Show(text, "הודעה", MessageBoxButtons.OK, MessageBoxIcon.None,
+                MessageBoxDefaultButton.Button1, MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign);
+        }
+
         private void button_submit_Click(object sender, EventArgs e)
         {
             if (!requireSelection()) return;
             try
             {
                 selectedPurchaseOrder.submit();
-                MessageBox.Show("ההזמנה נשלחה לאישור", "הודעה", MessageBoxButtons.OK);
+                showTransitionResult("ההזמנה נשלחה לאישור");
                 clearForm();
                 loadPurchaseOrders();
             }
@@ -428,7 +437,7 @@ namespace BenZionVilker
                 ComboBox rejecterBox = selectedPurchaseOrder.getStatus() == POStatus.PendingBudgetOverride
                     ? comboBox_overrideApprovedBy : comboBox_approvedBy;
                 selectedPurchaseOrder.reject(textBox_rejectionReason.Text, resolveSelectedEmployeeOrNull(rejecterBox));
-                MessageBox.Show("ההזמנה נדחתה", "הודעה", MessageBoxButtons.OK);
+                showTransitionResult("ההזמנה נדחתה");
                 clearForm();
                 loadPurchaseOrders();
             }
@@ -476,7 +485,7 @@ namespace BenZionVilker
             try
             {
                 selectedPurchaseOrder.approveBudgetOverride(resolveSelectedEmployeeOrNull(comboBox_overrideApprovedBy));
-                MessageBox.Show("חריגת התקציב אושרה", "הודעה", MessageBoxButtons.OK);
+                showTransitionResult("חריגת התקציב אושרה");
                 clearForm();
                 loadPurchaseOrders();
             }
@@ -500,7 +509,7 @@ namespace BenZionVilker
                 // used by every other MessageBox.Show in this app renders Hebrew LTR-aligned.
                 // That's only visible on a short one-liner if you look closely, but this is a
                 // multi-line composed message where it's clearly wrong, so it's fixed here.
-                MessageBox.Show(selectedPurchaseOrder.composeSupplierEmail(), "📧 מייל נשלח לספק",
+                MessageBox.Show(selectedPurchaseOrder.takeNotification(), "📧 מייל נשלח לספק",
                     MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1,
                     MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign);
                 clearForm();

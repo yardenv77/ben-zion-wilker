@@ -27,6 +27,20 @@ namespace BenZionVilker
         public string getPolicyNumber() { return this.policyNumber; }
         public string getCoverageType() { return this.coverageType; }
 
+        // Covered today: active, and today falls between the issue and expiry dates
+        public bool isCoverageActive()
+        {
+            return this.getStatus() == SecurityStatus.Active
+                && DateTime.Today >= this.getIssueDate().Date && DateTime.Today <= this.getExpiryDate().Date;
+        }
+
+        // A claim can be filed only on a policy that is covering today, and needs a description.
+        // Claims themselves are not a class in the domain model, so this checks eligibility only.
+        public bool fileClaim(string desc)
+        {
+            return this.isCoverageActive() && !string.IsNullOrWhiteSpace(desc);
+        }
+
         public void setInsurerName(string insurerName) { this.insurerName = insurerName; }
         public void setPolicyNumber(string policyNumber) { this.policyNumber = policyNumber; }
         public void setCoverageType(string coverageType) { this.coverageType = coverageType; }

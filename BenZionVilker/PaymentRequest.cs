@@ -36,6 +36,16 @@ namespace BenZionVilker
         public DateTime? getApprovalDate() { return this.approvalDate; }
         public PaymentRequestStatus getStatus() { return this.status; }
 
+        // Approved and Paid both mean the MOD approved the request (Paid comes after Approved)
+        public bool isApproved() { return this.status == PaymentRequestStatus.Approved || this.status == PaymentRequestStatus.Paid; }
+
+        // Days from submission until approval, or until today while still waiting
+        public int daysWaiting()
+        {
+            DateTime end = this.approvalDate ?? DateTime.Today;
+            return Math.Max(0, (int)(end.Date - this.submissionDate.Date).TotalDays);
+        }
+
         // Derived from SubmittedDocument (composition child), replacing the former
         // free-text missingDocuments column -- see design/class-diagram.md Section 5.
         public List<DocumentType> getMissingDocuments()

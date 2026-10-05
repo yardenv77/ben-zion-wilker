@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 
 namespace BenZionVilker
@@ -14,6 +16,25 @@ namespace BenZionVilker
                 if (this.createSupplier())
                     Program.BusinessPartners.Add(this);
             }
+        }
+
+        // Price quotes from this supplier that are still valid today
+        public List<SupplierPriceQuote> getActivePriceQuotes()
+        {
+            List<SupplierPriceQuote> quotes = new List<SupplierPriceQuote>();
+            foreach (SupplierPriceQuote q in Program.SupplierPriceQuotes)
+                if (q.getSupplier() == this && q.getValidUntil().Date >= DateTime.Today)
+                    quotes.Add(q);
+            return quotes;
+        }
+
+        public int getPurchaseOrderCount()
+        {
+            int count = 0;
+            foreach (PurchaseOrder po in Program.PurchaseOrders)
+                if (po.getSupplier() == this)
+                    count++;
+            return count;
         }
 
         // Writes both the BusinessPartner (parent) row and the Supplier (child) row,
