@@ -250,22 +250,22 @@ INSERT INTO SubmittedDocument (submitted_document_id, payment_request_id, type, 
 (24, 10, N'Invoice', '2026-05-28');
 GO
 
--- PurchaseOrder (10) -- poNumber is a genuine business identifier; project_id resolves
+-- PurchaseOrder (10) -- totalAmount/vatAmount are computed from the order's lines below (subtotal + 17% VAT, as PurchaseOrder.calculateTotal()/calculateVat() do); poNumber is a genuine business identifier; project_id resolves
 -- the previously-flagged gap; created_by/approved_by/override_approved_by are the
 -- Employee-role associations from the updated class diagram. status covers all 9 leaf
 -- POStatus values (UnderApproval/InFulfillment are transient superstate values and are
 -- never actually persisted -- see the note at the top of this file).
 INSERT INTO PurchaseOrder (purchase_order_id, poNumber, supplier_id, project_id, created_by_employee_id, approved_by_employee_id, override_approved_by_employee_id, orderDate, totalAmount, vatAmount, status, rejectionReason, closureReason) VALUES
-(1, N'PO-2025-0143', 1, 1, 11, 9, NULL, '2025-09-15', 180000.00, 27540.00, N'Sent', NULL, NULL),
-(2, N'PO-2025-0156', 2, 2, 11, 10, NULL, '2025-10-01', 95000.00, 14535.00, N'Received', NULL, N'Received'),
-(3, N'PO-2025-0161', 1, 1, 11, NULL, NULL, '2025-10-10', 220000.00, 33660.00, N'PendingPMApproval', NULL, NULL),
-(4, N'PO-2025-0178', 4, 4, 11, 10, NULL, '2025-11-05', 64000.00, 9792.00, N'Sent', NULL, NULL),
-(5, N'PO-2025-0122', 3, 3, 11, NULL, NULL, '2025-08-20', 45000.00, 6885.00, N'Rejected', N'המחיר חורג משמעותית מהצעת המחיר המקורית שאושרה', NULL),
-(6, N'PO-2026-0033', 2, 2, 11, NULL, 13, '2026-01-05', 310000.00, 47430.00, N'PendingBudgetOverride', NULL, NULL),
-(7, N'PO-2026-0058', 1, 1, 11, 9, 13, '2026-02-10', 128000.00, 19584.00, N'Archived', NULL, N'Received'),
-(8, N'PO-2026-0071', 4, 4, 11, 10, NULL, '2026-02-20', 52000.00, 7956.00, N'PartiallyReceived', NULL, NULL),
-(9, N'PO-2026-0084', 2, 2, 11, NULL, NULL, '2026-03-01', 175000.00, 26775.00, N'Draft', NULL, NULL),
-(10, N'PO-2026-0097', 1, 1, 11, NULL, NULL, '2026-03-10', 99000.00, 15147.00, N'Cancelled', NULL, N'Cancelled');
+(1, N'PO-2025-0143', 1, 1, 11, 9, NULL, '2025-09-15', 149760.00, 21760.00, N'Sent', NULL, NULL),
+(2, N'PO-2025-0156', 2, 2, 11, 10, NULL, '2025-10-01', 59670.00, 8670.00, N'Received', NULL, N'Received'),
+(3, N'PO-2025-0161', 1, 1, 11, NULL, NULL, '2025-10-10', 152451.00, 22151.00, N'PendingPMApproval', NULL, NULL),
+(4, N'PO-2025-0178', 4, 4, 11, 10, NULL, '2025-11-05', 43009.20, 6249.20, N'Sent', NULL, NULL),
+(5, N'PO-2025-0122', 3, 3, 11, NULL, NULL, '2025-08-20', 37440.00, 5440.00, N'Rejected', N'המחיר חורג משמעותית מהצעת המחיר המקורית שאושרה', NULL),
+(6, N'PO-2026-0033', 2, 2, 11, NULL, 13, '2026-01-05', 280741.50, 40791.50, N'PendingBudgetOverride', NULL, NULL),
+(7, N'PO-2026-0058', 1, 1, 11, 9, 13, '2026-02-10', 66690.00, 9690.00, N'Archived', NULL, N'Received'),
+(8, N'PO-2026-0071', 4, 4, 11, 10, NULL, '2026-02-20', 26114.40, 3794.40, N'PartiallyReceived', NULL, NULL),
+(9, N'PO-2026-0084', 2, 2, 11, NULL, NULL, '2026-03-01', 111618.00, 16218.00, N'Draft', NULL, NULL),
+(10, N'PO-2026-0097', 1, 1, 11, NULL, NULL, '2026-03-10', 147607.20, 21447.20, N'Cancelled', NULL, N'Cancelled');
 GO
 
 -- PurchaseOrderLine (16) -- PurchaseOrder 1 -- 1..* PurchaseOrderLine; receivedQuantity

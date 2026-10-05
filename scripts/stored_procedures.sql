@@ -1784,7 +1784,7 @@ GO
 -- Project, so a project with N PaymentRequests and M BudgetLines doesn't
 -- produce N*M duplicated rows.
 --
--- Revenue = SUM(PaymentRequest.amount) for status='Approved' rows whose
+-- Revenue = SUM(PaymentRequest.amount) for status IN ('Approved','Paid') rows whose
 -- approvalDate falls in [@date_from, @date_to].
 -- Actual cost = SUM(BudgetLine.actualAmount) for the project -- BudgetLine
 -- has no date column, so this is the project's cumulative actual cost as of
@@ -1978,7 +1978,7 @@ BEGIN
     WITH Revenue AS (
         SELECT pr.project_id, SUM(pr.amount) AS revenue
         FROM PaymentRequest pr
-        WHERE pr.status = N'Approved'
+        WHERE pr.status IN (N'Approved', N'Paid') -- Paid comes after Approved; same rule as PaymentRequest.isApproved()
           AND pr.approvalDate >= @date_from
           AND pr.approvalDate <= @date_to
         GROUP BY pr.project_id
@@ -2003,5 +2003,66 @@ BEGIN
     WHERE (@project_id IS NULL OR p.project_id = @project_id)
       AND (r.revenue IS NOT NULL OR c.actualCost IS NOT NULL)
     ORDER BY p.project_id;
+END
+GO
+
+-- ============================================================================
+-- UC-05 report, second part: monthly cash flow (docs/00e-use-cases.md UC-05
+-- MSS step 7, "monthly cash flow trends"). Same filters as
+-- sp_report_project_profitability, one row per month that has any movement.
+--
+-- Cash in  = PaymentRequest.amount, status IN ('Approved','Paid'), by the month
+--            of approvalDate (same rule as the profitability report and
+--            PaymentRequest.isApproved()).
+-- Cash out = PurchaseOrder.totalAmount for orders that passed PM approval and
+--            were not cancelled -- Sent, PartiallyReceived, Received, or Archived
+--            with closureReason 'Received' -- by the month of orderDate.
+--            PurchaseOrder rather than SupplierPayment: SupplierPayment links to
+--            a BusinessPartner only (class diagram #29), not to a Project, so it
+--            could not honour the project filter.
+-- Cumulative balance = running SUM of the monthly net (window function).
+-- ============================================================================
+
+CREATE PROCEDURE sp_report_monthly_cash_flow
+    @date_from DATETIME2,
+    @date_to DATETIME2,
+    @project_id INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    WITH Movements AS (
+        SELECT DATEFROMPARTS(YEAR(pr.approvalDate), MONTH(pr.approvalDate), 1) AS month_start,
+               pr.amount AS cash_in,
+               CAST(0 AS DECIMAL(18,2)) AS cash_out
+        FROM PaymentRequest pr
+        WHERE pr.status IN (N'Approved', N'Paid')
+          AND pr.approvalDate >= @date_from
+          AND pr.approvalDate <= @date_to
+          AND (@project_id IS NULL OR pr.project_id = @project_id)
+        UNION ALL
+        SELECT DATEFROMPARTS(YEAR(po.orderDate), MONTH(po.orderDate), 1),
+               CAST(0 AS DECIMAL(18,2)),
+               po.totalAmount
+        FROM PurchaseOrder po
+        WHERE (po.status IN (N'Sent', N'PartiallyReceived', N'Received')
+               OR (po.status = N'Archived' AND po.closureReason = N'Received'))
+          AND po.orderDate >= @date_from
+          AND po.orderDate <= @date_to
+          AND (@project_id IS NULL OR po.project_id = @project_id)
+    ),
+    Monthly AS (
+        SELECT month_start, SUM(cash_in) AS cash_in, SUM(cash_out) AS cash_out
+        FROM Movements
+        GROUP BY month_start
+    )
+    SELECT
+        FORMAT(month_start, 'MM/yyyy') AS [חודש],
+        cash_in AS [הכנסות],
+        cash_out AS [הוצאות],
+        cash_in - cash_out AS [תזרים_נטו],
+        SUM(cash_in - cash_out) OVER (ORDER BY month_start ROWS UNBOUNDED PRECEDING) AS [יתרה_מצטברת]
+    FROM Monthly
+    ORDER BY month_start;
 END
 GO

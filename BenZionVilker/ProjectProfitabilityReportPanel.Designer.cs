@@ -33,8 +33,12 @@ namespace BenZionVilker
             this.label_kpiProfitCaption = new System.Windows.Forms.Label();
             this.dataGridView_report = new System.Windows.Forms.DataGridView();
             this.panel_chart = new System.Windows.Forms.Panel();
+            this.label_cashFlowTitle = new System.Windows.Forms.Label();
+            this.dataGridView_cashFlow = new System.Windows.Forms.DataGridView();
+            this.panel_cashFlowChart = new System.Windows.Forms.Panel();
             this.button_back = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_report)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView_cashFlow)).BeginInit();
             this.SuspendLayout();
             //
             // label_title
@@ -46,7 +50,7 @@ namespace BenZionVilker
             this.label_title.Name = "label_title";
             this.label_title.Size = new System.Drawing.Size(440, 40);
             this.label_title.TabIndex = 0;
-            this.label_title.Text = "דוח רווחיות פרויקטים";
+            this.label_title.Text = "דוח רווחיות ותזרים מזומנים";
             //
             // label_dateFrom
             //
@@ -232,14 +236,42 @@ namespace BenZionVilker
             this.panel_chart.Size = new System.Drawing.Size(900, 280);
             this.panel_chart.TabIndex = 12;
             //
+            // label_cashFlowTitle -- UC-05 MSS step 7, "monthly cash flow trends"
+            //
+            this.label_cashFlowTitle.AutoSize = true;
+            this.label_cashFlowTitle.Location = new System.Drawing.Point(780, 1010);
+            this.label_cashFlowTitle.Name = "label_cashFlowTitle";
+            this.label_cashFlowTitle.Size = new System.Drawing.Size(170, 21);
+            this.label_cashFlowTitle.TabIndex = 13;
+            this.label_cashFlowTitle.Text = "תזרים מזומנים חודשי";
+            //
+            // dataGridView_cashFlow -- one row per month from sp_report_monthly_cash_flow
+            //
+            this.dataGridView_cashFlow.AllowUserToAddRows = false;
+            this.dataGridView_cashFlow.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView_cashFlow.Location = new System.Drawing.Point(50, 1045);
+            this.dataGridView_cashFlow.Name = "dataGridView_cashFlow";
+            this.dataGridView_cashFlow.ReadOnly = true;
+            this.dataGridView_cashFlow.RowTemplate.Height = 24;
+            this.dataGridView_cashFlow.Size = new System.Drawing.Size(900, 260);
+            this.dataGridView_cashFlow.TabIndex = 14;
+            //
+            // panel_cashFlowChart -- monthly cash in / cash out columns plus the cumulative
+            // balance as a line, hand-drawn like panel_chart (see the note on panel_chart above)
+            //
+            this.panel_cashFlowChart.Location = new System.Drawing.Point(50, 1325);
+            this.panel_cashFlowChart.Name = "panel_cashFlowChart";
+            this.panel_cashFlowChart.Size = new System.Drawing.Size(900, 280);
+            this.panel_cashFlowChart.TabIndex = 15;
+            //
             // button_back
             //
             this.button_back.Cursor = System.Windows.Forms.Cursors.Hand;
             this.button_back.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
-            this.button_back.Location = new System.Drawing.Point(445, 1020);
+            this.button_back.Location = new System.Drawing.Point(445, 1635);
             this.button_back.Name = "button_back";
             this.button_back.Size = new System.Drawing.Size(110, 42);
-            this.button_back.TabIndex = 13;
+            this.button_back.TabIndex = 16;
             this.button_back.Text = "חזרה";
             this.button_back.UseVisualStyleBackColor = true;
             this.button_back.Click += new System.EventHandler(this.button_back_Click);
@@ -249,6 +281,9 @@ namespace BenZionVilker
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.button_back);
+            this.Controls.Add(this.panel_cashFlowChart);
+            this.Controls.Add(this.dataGridView_cashFlow);
+            this.Controls.Add(this.label_cashFlowTitle);
             this.Controls.Add(this.panel_chart);
             this.Controls.Add(this.dataGridView_report);
             this.Controls.Add(this.panel_kpiProfit);
@@ -264,8 +299,9 @@ namespace BenZionVilker
             this.Controls.Add(this.label_title);
             this.Name = "ProjectProfitabilityReportPanel";
             this.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
-            this.Size = new System.Drawing.Size(1000, 1090);
+            this.Size = new System.Drawing.Size(1000, 1705);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView_report)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView_cashFlow)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
         }
@@ -291,6 +327,9 @@ namespace BenZionVilker
         private System.Windows.Forms.Label label_kpiProfitCaption;
         private System.Windows.Forms.DataGridView dataGridView_report;
         private System.Windows.Forms.Panel panel_chart;
+        private System.Windows.Forms.Label label_cashFlowTitle;
+        private System.Windows.Forms.DataGridView dataGridView_cashFlow;
+        private System.Windows.Forms.Panel panel_cashFlowChart;
         private System.Windows.Forms.Button button_back;
     }
 }
